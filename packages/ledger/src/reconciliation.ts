@@ -2,8 +2,7 @@ import type { Clock } from '@x402-treasury/shared';
 import { systemClock } from '@x402-treasury/shared';
 import type { Pool } from 'pg';
 import { transitionPaymentIntent } from './payment-intents.js';
-import { releaseReservation } from './settle-reservation.js';
-import { withTransaction } from './tx.js';
+import { captureReservation, releaseReservation } from './settle-reservation.js';
 
 export interface ReconciliationOutcome {
   paymentIntentId: string;
@@ -69,17 +68,26 @@ export async function runReconciliation(
       outcomes.push({ paymentIntentId: id, resolution: 'MARKED_FOR_REVIEW', detail: 'settlement oracle could not determine outcome' });
       continue;
     }
-    await withTransaction(pool, async (client) => {
-      const intent = await transitionPaymentIntent(client, id, result === 'SETTLED' ? 'SETTLED' : 'FAILED', {
-        reason: `reconciliation: oracle reported ${result}`,
-      });
-      if (result === 'FAILED' && intent.reservationId) {
+    // Each step below is its own transaction (transitionPaymentIntent and
+    // capture/releaseReservation each open one via `pool`) rather than one
+    // nested transaction spanning both — the reservation/budget-chain
+    // locks and the payment_intents row lock are acquired by separate
+    // connections, and serializing them into separate short transactions
+    // avoids holding the intent row locked while a second connection does
+    // unrelated work.
+    const intent = await transitionPaymentIntent(pool, id, result === 'SETTLED' ? 'SETTLED' : 'FAILED', {
+      reason: `reconciliation: oracle reported ${result}`,
+    });
+    if (intent.reservationId) {
+      if (result === 'SETTLED') {
+        await captureReservation(pool, intent.reservationId, clock);
+      } else {
         await releaseReservation(pool, intent.reservationId, clock);
-        await transitionPaymentIntent(client, id, 'RESERVATION_RELEASED', {
+        await transitionPaymentIntent(pool, id, 'RESERVATION_RELEASED', {
           reason: 'reconciliation: released reservation after confirmed failure',
         });
       }
-    });
+    }
     const resolution = result === 'SETTLED' ? 'CONFIRMED_SETTLED' : 'CONFIRMED_FAILED';
     await recordReconciliation(pool, id, 'RECONCILIATION_REQUIRED', resolution, `settlement oracle reported ${result}`);
     outcomes.push({ paymentIntentId: id, resolution, detail: `settlement oracle reported ${result}` });

@@ -1,0 +1,30 @@
+{
+  "name": "@x402-treasury/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "reconcile": "tsx src/reconcile.ts"
+  },
+  "dependencies": {
+    "@x402-treasury/db": "workspace:*",
+    "@x402-treasury/ledger": "workspace:*",
+    "@x402-treasury/policy-engine": "workspace:*",
+    "@x402-treasury/router": "workspace:*",
+    "@x402-treasury/shared": "workspace:*",
+    "@x402-treasury/x402-adapter": "workspace:*",
+    "fastify": "^5.2.0",
+    "pg": "^8.13.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

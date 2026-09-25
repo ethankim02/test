@@ -18,6 +18,8 @@ export interface PaymentIntentRow {
   state: PaymentIntentState;
   failureReason: string | null;
   settlementTxHash: string | null;
+  requestFingerprint: string | null;
+  x402Payload: unknown;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +39,8 @@ interface RawPaymentIntentRow {
   state: PaymentIntentState;
   failure_reason: string | null;
   settlement_tx_hash: string | null;
+  request_fingerprint: string | null;
+  x402_payload: unknown;
   created_at: Date;
   updated_at: Date;
 }
@@ -57,6 +61,8 @@ function mapRow(r: RawPaymentIntentRow): PaymentIntentRow {
     state: r.state,
     failureReason: r.failure_reason,
     settlementTxHash: r.settlement_tx_hash,
+    requestFingerprint: r.request_fingerprint,
+    x402Payload: r.x402_payload,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -71,14 +77,15 @@ export interface CreatePaymentIntentParams {
   asset?: string;
   network: string;
   idempotencyKeyId?: string | undefined;
+  requestFingerprint?: string | undefined;
 }
 
 /** Creates a payment intent in CREATED state. Does not evaluate policy or reserve funds. */
 export async function createPaymentIntent(pool: Pool, params: CreatePaymentIntentParams): Promise<PaymentIntentRow> {
   const { rows } = await pool.query<RawPaymentIntentRow>(
     `INSERT INTO payment_intents
-       (org_id, agent_id, session_budget_id, provider_id, amount_minor, asset, network, state, idempotency_key_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 'CREATED', $8)
+       (org_id, agent_id, session_budget_id, provider_id, amount_minor, asset, network, state, idempotency_key_id, request_fingerprint)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'CREATED', $8, $9)
      RETURNING *`,
     [
       params.orgId,
@@ -89,6 +96,7 @@ export async function createPaymentIntent(pool: Pool, params: CreatePaymentInten
       params.asset ?? 'USDC',
       params.network,
       params.idempotencyKeyId ?? null,
+      params.requestFingerprint ?? null,
     ],
   );
   const row = rows[0];
@@ -111,7 +119,7 @@ export interface TransitionOptions {
   reason?: string;
   /** Extra columns to set atomically with the transition, e.g. reservationId, settlementTxHash. */
   patch?: Partial<
-    Pick<PaymentIntentRow, 'reservationId' | 'routingDecisionId' | 'failureReason' | 'settlementTxHash'>
+    Pick<PaymentIntentRow, 'reservationId' | 'routingDecisionId' | 'failureReason' | 'settlementTxHash' | 'x402Payload'>
   >;
 }
 
@@ -148,8 +156,9 @@ export async function transitionPaymentIntent(
            routing_decision_id = COALESCE($3, routing_decision_id),
            failure_reason = COALESCE($4, failure_reason),
            settlement_tx_hash = COALESCE($5, settlement_tx_hash),
+           x402_payload = COALESCE($6, x402_payload),
            updated_at = now()
-       WHERE id = $6
+       WHERE id = $7
        RETURNING *`,
       [
         toState,
@@ -157,6 +166,7 @@ export async function transitionPaymentIntent(
         patch.routingDecisionId ?? null,
         patch.failureReason ?? null,
         patch.settlementTxHash ?? null,
+        patch.x402Payload !== undefined ? JSON.stringify(patch.x402Payload) : null,
         id,
       ],
     );

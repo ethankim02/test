@@ -19,12 +19,12 @@ export interface RoutingWeights {
 }
 
 export interface RoutingConstraints {
-  maxPriceMinor?: bigint;
-  maxLatencyMs?: number;
-  minSuccessRate?: number;
+  maxPriceMinor?: bigint | undefined;
+  maxLatencyMs?: number | undefined;
+  minSuccessRate?: number | undefined;
   objective: RoutingObjective;
   /** Only used when objective === 'balanced'. See docs/ROUTING.md for the default and the formula. */
-  weights?: RoutingWeights;
+  weights?: RoutingWeights | undefined;
 }
 
 export interface RejectedCandidate {

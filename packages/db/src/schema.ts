@@ -143,6 +143,7 @@ export const providers = pgTable(
     asset: text('asset').notNull().default('USDC'),
     configuredPriceMinor: bigint('configured_price_minor', { mode: 'bigint' }),
     trustStatus: text('trust_status').notNull().default('UNKNOWN'), // TRUSTED|KNOWN|UNKNOWN
+    payTo: text('pay_to'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('idx_providers_org_id').on(t.orgId), index('idx_providers_category').on(t.category)],
@@ -239,6 +240,8 @@ export const paymentIntents = pgTable(
     state: text('state').notNull(),
     failureReason: text('failure_reason'),
     settlementTxHash: text('settlement_tx_hash'),
+    requestFingerprint: text('request_fingerprint'),
+    x402Payload: jsonb('x402_payload'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
