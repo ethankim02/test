@@ -36,11 +36,15 @@ export class MockX402Adapter implements PaymentRail {
   async discoverRequirements(resource: ResourceRef): Promise<PaymentRequirements> {
     const response = await fetch(resource.url);
     if (response.status !== 402) {
-      throw new Error(`MockX402Adapter: expected HTTP 402 from ${resource.url}, got ${response.status}`);
+      throw new Error(
+        `MockX402Adapter: expected HTTP 402 from ${resource.url}, got ${response.status}`,
+      );
     }
     const header = response.headers.get(PAYMENT_REQUIRED_HEADER);
     if (!header) {
-      throw new Error(`MockX402Adapter: 402 response from ${resource.url} is missing the ${PAYMENT_REQUIRED_HEADER} header`);
+      throw new Error(
+        `MockX402Adapter: 402 response from ${resource.url} is missing the ${PAYMENT_REQUIRED_HEADER} header`,
+      );
     }
     const required = decodeHeader<PaymentRequiredWire>(header);
     const offer = required.accepts[0];
@@ -50,7 +54,11 @@ export class MockX402Adapter implements PaymentRail {
     return fromWire(offer);
   }
 
-  async preparePayment(requirements: PaymentRequirements, resource: ResourceRef, payer: PayerContext): Promise<SignedPayment> {
+  async preparePayment(
+    requirements: PaymentRequirements,
+    resource: ResourceRef,
+    payer: PayerContext,
+  ): Promise<SignedPayment> {
     const wire: PaymentPayloadWire = {
       x402Version: 2,
       resource: { url: resource.url },
@@ -73,12 +81,19 @@ export class MockX402Adapter implements PaymentRail {
    * the client, but nothing in the v2 spec restricts who may call it (see
    * docs/RESEARCH.md §6) and pre-validating is a legitimate optimization.
    */
-  async verifyPayment(signed: SignedPayment, requirements: PaymentRequirements): Promise<VerifyResult> {
+  async verifyPayment(
+    signed: SignedPayment,
+    requirements: PaymentRequirements,
+  ): Promise<VerifyResult> {
     const result = mockVerify(signed.raw as PaymentPayloadWire, toWire(requirements));
     return { isValid: result.isValid, invalidReason: result.invalidReason };
   }
 
-  async settlePayment(signed: SignedPayment, requirements: PaymentRequirements, resource: ResourceRef): Promise<SettleResult> {
+  async settlePayment(
+    signed: SignedPayment,
+    requirements: PaymentRequirements,
+    resource: ResourceRef,
+  ): Promise<SettleResult> {
     const header = encodeHeader(signed.raw);
     const response = await fetch(resource.url, { headers: { [PAYMENT_SIGNATURE_HEADER]: header } });
 

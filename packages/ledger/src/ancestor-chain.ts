@@ -9,7 +9,10 @@ import { mapBudgetRow, type BudgetRow, type RawBudgetRow } from './types.js';
  * that only need to *read* budget hierarchy (e.g. the API's session
  * summary endpoint) don't pay for or hold row locks.
  */
-export async function getAncestorChainIds(client: PoolClient, leafBudgetId: string): Promise<string[]> {
+export async function getAncestorChainIds(
+  client: PoolClient,
+  leafBudgetId: string,
+): Promise<string[]> {
   const { rows } = await client.query<{ id: string; depth: number }>(
     `WITH RECURSIVE chain AS (
        SELECT id, parent_budget_id, 0 AS depth FROM budgets WHERE id = $1
@@ -43,11 +46,17 @@ export async function getAncestorChainIds(client: PoolClient, leafBudgetId: stri
  * query) specifically so the acquisition order is exactly the order this
  * function iterates, not whatever order the query planner happens to pick.
  */
-export async function lockBudgetChain(client: PoolClient, leafBudgetId: string): Promise<BudgetRow[]> {
+export async function lockBudgetChain(
+  client: PoolClient,
+  leafBudgetId: string,
+): Promise<BudgetRow[]> {
   const ids = await getAncestorChainIds(client, leafBudgetId);
   const locked: BudgetRow[] = [];
   for (const id of ids) {
-    const { rows } = await client.query<RawBudgetRow>('SELECT * FROM budgets WHERE id = $1 FOR UPDATE', [id]);
+    const { rows } = await client.query<RawBudgetRow>(
+      'SELECT * FROM budgets WHERE id = $1 FOR UPDATE',
+      [id],
+    );
     const row = rows[0];
     if (!row) {
       throw new DomainError('NOT_FOUND', `budget ${id} disappeared mid-transaction`);

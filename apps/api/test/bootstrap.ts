@@ -17,7 +17,12 @@ export interface Bootstrapped {
 export async function bootstrap(
   app: FastifyInstance,
   pool: Pool,
-  opts: { orgDailyBudget?: string; agentDailyBudget?: string; sessionBudget?: string; priceMinor?: string } = {},
+  opts: {
+    orgDailyBudget?: string;
+    agentDailyBudget?: string;
+    sessionBudget?: string;
+    priceMinor?: string;
+  } = {},
 ): Promise<Bootstrapped> {
   const orgResp = await app.inject({
     method: 'POST',
@@ -71,12 +76,10 @@ export async function bootstrap(
   // Agent-scoped keys aren't issued through a public endpoint in this MVP
   // (see README Roadmap) — inserted directly for the authorization test.
   const agentKey = `sk_agent_${crypto.randomUUID().replace(/-/g, '')}`;
-  await pool.query('INSERT INTO api_keys (org_id, agent_id, key_hash, label) VALUES ($1, $2, $3, $4)', [
-    org.id,
-    agent.id,
-    hashApiKey(agentKey),
-    'Test agent-scoped key',
-  ]);
+  await pool.query(
+    'INSERT INTO api_keys (org_id, agent_id, key_hash, label) VALUES ($1, $2, $3, $4)',
+    [org.id, agent.id, hashApiKey(agentKey), 'Test agent-scoped key'],
+  );
 
   return {
     orgId: org.id,

@@ -60,13 +60,21 @@ describe('dailyAgentLimit / dailyOrgLimit', () => {
 
 describe('categoryDailyLimit', () => {
   it('is scoped to the configured category and ignores others', () => {
-    const ctx = baseContext({ provider: { id: 'p', category: 'data', trustStatus: 'TRUSTED' }, categoryDailySpentMinor: 10_000_000n, amountMinor: 1n });
+    const ctx = baseContext({
+      provider: { id: 'p', category: 'data', trustStatus: 'TRUSTED' },
+      categoryDailySpentMinor: 10_000_000n,
+      amountMinor: 1n,
+    });
     const result = categoryDailyLimit(ctx, { category: 'search', maxAmountMinor: '5000000' });
     expect(result.verdict).toBe('ALLOW');
   });
 
   it('blocks when the matching category would exceed its limit', () => {
-    const ctx = baseContext({ provider: { id: 'p', category: 'search', trustStatus: 'TRUSTED' }, categoryDailySpentMinor: 4_990_000n, amountMinor: 20_000n });
+    const ctx = baseContext({
+      provider: { id: 'p', category: 'search', trustStatus: 'TRUSTED' },
+      categoryDailySpentMinor: 4_990_000n,
+      amountMinor: 20_000n,
+    });
     const result = categoryDailyLimit(ctx, { category: 'search', maxAmountMinor: '5000000' });
     expect(result.verdict).toBe('BLOCK');
     expect(result.reasonCode).toBe('CATEGORY_DAILY_LIMIT_EXCEEDED');
@@ -75,7 +83,9 @@ describe('categoryDailyLimit', () => {
 
 describe('providerAllowlist / providerDenylist', () => {
   it('blocks a provider not on the allowlist', () => {
-    const ctx = baseContext({ provider: { id: 'unlisted', category: 'search', trustStatus: 'TRUSTED' } });
+    const ctx = baseContext({
+      provider: { id: 'unlisted', category: 'search', trustStatus: 'TRUSTED' },
+    });
     const result = providerAllowlist(ctx, { providerIds: ['a', 'b'] });
     expect(result.verdict).toBe('BLOCK');
     expect(result.reasonCode).toBe('PROVIDER_NOT_ALLOWED');
@@ -87,7 +97,9 @@ describe('providerAllowlist / providerDenylist', () => {
   });
 
   it('blocks a provider on the denylist', () => {
-    const ctx = baseContext({ provider: { id: 'bad', category: 'search', trustStatus: 'TRUSTED' } });
+    const ctx = baseContext({
+      provider: { id: 'bad', category: 'search', trustStatus: 'TRUSTED' },
+    });
     const result = providerDenylist(ctx, { providerIds: ['bad'] });
     expect(result.verdict).toBe('BLOCK');
   });
@@ -95,12 +107,18 @@ describe('providerAllowlist / providerDenylist', () => {
 
 describe('unknownProviderLimit', () => {
   it('is a no-op for known/trusted providers regardless of amount', () => {
-    const ctx = baseContext({ provider: { id: 'p', category: 'search', trustStatus: 'TRUSTED' }, amountMinor: 5_000_000n });
+    const ctx = baseContext({
+      provider: { id: 'p', category: 'search', trustStatus: 'TRUSTED' },
+      amountMinor: 5_000_000n,
+    });
     expect(unknownProviderLimit(ctx, { maxAmountMinor: '50000' }).verdict).toBe('ALLOW');
   });
 
   it('blocks an unknown provider above the small limit', () => {
-    const ctx = baseContext({ provider: { id: 'p', category: 'search', trustStatus: 'UNKNOWN' }, amountMinor: 60_000n });
+    const ctx = baseContext({
+      provider: { id: 'p', category: 'search', trustStatus: 'UNKNOWN' },
+      amountMinor: 60_000n,
+    });
     const result = unknownProviderLimit(ctx, { maxAmountMinor: '50000' });
     expect(result.verdict).toBe('BLOCK');
     expect(result.reasonCode).toBe('UNKNOWN_PROVIDER_LIMIT_EXCEEDED');
@@ -112,7 +130,14 @@ describe('duplicatePaymentWindow', () => {
     const ctx = baseContext({
       requestFingerprint: 'fp-x',
       now: new Date('2026-01-01T00:00:10.000Z'),
-      recentPayments: [{ providerId: 'p', amountMinor: 1n, requestFingerprint: 'fp-x', createdAt: new Date('2026-01-01T00:00:07.000Z') }],
+      recentPayments: [
+        {
+          providerId: 'p',
+          amountMinor: 1n,
+          requestFingerprint: 'fp-x',
+          createdAt: new Date('2026-01-01T00:00:07.000Z'),
+        },
+      ],
     });
     const result = duplicatePaymentWindow(ctx, { windowSeconds: 5 });
     expect(result.verdict).toBe('BLOCK');
@@ -123,14 +148,26 @@ describe('duplicatePaymentWindow', () => {
     const ctx = baseContext({
       requestFingerprint: 'fp-x',
       now: new Date('2026-01-01T00:00:10.000Z'),
-      recentPayments: [{ providerId: 'p', amountMinor: 1n, requestFingerprint: 'fp-x', createdAt: new Date('2026-01-01T00:00:00.000Z') }],
+      recentPayments: [
+        {
+          providerId: 'p',
+          amountMinor: 1n,
+          requestFingerprint: 'fp-x',
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      ],
     });
     expect(duplicatePaymentWindow(ctx, { windowSeconds: 5 }).verdict).toBe('ALLOW');
   });
 
   it('retrying the identical logical request 5 times in a row only the first is allowed', () => {
     const params = { windowSeconds: 5 };
-    let recentPayments: { providerId: string; amountMinor: bigint; requestFingerprint: string; createdAt: Date }[] = [];
+    let recentPayments: {
+      providerId: string;
+      amountMinor: bigint;
+      requestFingerprint: string;
+      createdAt: Date;
+    }[] = [];
     const results = [];
     for (let i = 0; i < 5; i++) {
       const now = new Date('2026-01-01T00:00:00.000Z');
@@ -138,7 +175,10 @@ describe('duplicatePaymentWindow', () => {
       const result = duplicatePaymentWindow(ctx, params);
       results.push(result.verdict);
       if (result.verdict === 'ALLOW') {
-        recentPayments = [...recentPayments, { providerId: 'p', amountMinor: 1n, requestFingerprint: 'retry-fp', createdAt: now }];
+        recentPayments = [
+          ...recentPayments,
+          { providerId: 'p', amountMinor: 1n, requestFingerprint: 'retry-fp', createdAt: now },
+        ];
       }
     }
     expect(results).toEqual(['ALLOW', 'BLOCK', 'BLOCK', 'BLOCK', 'BLOCK']);

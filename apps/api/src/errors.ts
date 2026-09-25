@@ -17,12 +17,18 @@ export function registerErrorHandler(app: FastifyInstance): void {
     }
     if (err instanceof ZodError) {
       reply.status(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'request validation failed', details: { issues: err.issues } },
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'request validation failed',
+          details: { issues: err.issues },
+        },
       });
       return;
     }
     request.log.error(err);
-    reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'an unexpected error occurred' } });
+    reply
+      .status(500)
+      .send({ error: { code: 'INTERNAL_ERROR', message: 'an unexpected error occurred' } });
   });
 }
 

@@ -63,7 +63,12 @@ describe('delegated agent budgets', () => {
     // One more minor unit — $2.000001 — must fail, even though the parent
     // agent budget still has $8 available.
     await expect(
-      reserveBudget(pool, { leafBudgetId: delegatedBudget.id, agentId: subAgentId, amountMinor: 1n, ttlSeconds: 60 }),
+      reserveBudget(pool, {
+        leafBudgetId: delegatedBudget.id,
+        agentId: subAgentId,
+        amountMinor: 1n,
+        ttlSeconds: 60,
+      }),
     ).rejects.toMatchObject({ code: 'INSUFFICIENT_BUDGET' });
 
     const parentAfter = await getBudget(pool, agentBudget.id);
@@ -100,7 +105,12 @@ describe('delegated agent budgets', () => {
       allocatedMinor: 1_000_000n,
     });
 
-    await reserveBudget(pool, { leafBudgetId: taskBudget.id, agentId: subAgentId, amountMinor: 300_000n, ttlSeconds: 60 });
+    await reserveBudget(pool, {
+      leafBudgetId: taskBudget.id,
+      agentId: subAgentId,
+      amountMinor: 300_000n,
+      ttlSeconds: 60,
+    });
 
     for (const [budget, expectedAvailable] of [
       [taskBudget, 700_000n],
@@ -129,14 +139,21 @@ describe('delegated agent budgets', () => {
   });
 
   it('the database itself refuses a budget cycle even if attempted directly via SQL', async () => {
-    const { orgBudget, agentBudget } = await createTestHierarchy(pool, { org: 1_000_000n, agent: 500_000n, session: 0n });
+    const { orgBudget, agentBudget } = await createTestHierarchy(pool, {
+      org: 1_000_000n,
+      agent: 500_000n,
+      session: 0n,
+    });
 
     // Attempt to make the org root's parent point at its own descendant —
     // this would only be reachable if a future re-parenting API existed;
     // the trigger from migrations/0002_budget_cycle_guard.sql must still
     // reject it as a last line of defense.
     await expect(
-      pool.query('UPDATE budgets SET parent_budget_id = $1 WHERE id = $2', [agentBudget.id, orgBudget.id]),
+      pool.query('UPDATE budgets SET parent_budget_id = $1 WHERE id = $2', [
+        agentBudget.id,
+        orgBudget.id,
+      ]),
     ).rejects.toThrow(/cycle/i);
   });
 });

@@ -2,7 +2,11 @@ import type { DomainError } from '@x402-treasury/shared';
 import type { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { sweepExpiredReservations } from '../src/expire-sweep.js';
-import { createPaymentIntent, getPaymentIntent, transitionPaymentIntent } from '../src/payment-intents.js';
+import {
+  createPaymentIntent,
+  getPaymentIntent,
+  transitionPaymentIntent,
+} from '../src/payment-intents.js';
 import { getBudget, getReservation } from '../src/read.js';
 import { reserveBudget } from '../src/reserve.js';
 import { captureReservation, releaseReservation } from '../src/settle-reservation.js';
@@ -190,7 +194,9 @@ describe('reservation lifecycle', () => {
       amountMinor: 30_000n,
       ttlSeconds: 60,
     });
-    await transitionPaymentIntent(pool, intent.id, 'RESERVED', { patch: { reservationId: reservation.id } });
+    await transitionPaymentIntent(pool, intent.id, 'RESERVED', {
+      patch: { reservationId: reservation.id },
+    });
     await transitionPaymentIntent(pool, intent.id, 'PAYMENT_PREPARED');
     await transitionPaymentIntent(pool, intent.id, 'VERIFYING');
     await transitionPaymentIntent(pool, intent.id, 'SETTLING');

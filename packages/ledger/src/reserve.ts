@@ -21,7 +21,10 @@ export interface ReserveBudgetParams {
  * is the operation the mandatory concurrency test exercises directly: see
  * docs/ARCHITECTURE.md §4.4.
  */
-export async function reserveBudget(pool: Pool, params: ReserveBudgetParams): Promise<ReservationRow> {
+export async function reserveBudget(
+  pool: Pool,
+  params: ReserveBudgetParams,
+): Promise<ReservationRow> {
   const clock = params.clock ?? systemClock;
   return withTransaction(pool, async (client) => {
     const chain = await lockBudgetChain(client, params.leafBudgetId);
@@ -32,7 +35,13 @@ export async function reserveBudget(pool: Pool, params: ReserveBudgetParams): Pr
           'INSUFFICIENT_BUDGET',
           `budget "${budget.name}" (${budget.id}) has ${budget.availableMinor} minor units available, ` +
             `requested ${params.amountMinor}`,
-          { details: { budgetId: budget.id, availableMinor: budget.availableMinor.toString(), requestedMinor: params.amountMinor.toString() } },
+          {
+            details: {
+              budgetId: budget.id,
+              availableMinor: budget.availableMinor.toString(),
+              requestedMinor: params.amountMinor.toString(),
+            },
+          },
         );
       }
     }
@@ -52,11 +61,10 @@ export async function reserveBudget(pool: Pool, params: ReserveBudgetParams): Pr
     for (const budget of chain) {
       const newAvailable = budget.availableMinor - params.amountMinor;
       const newReserved = budget.reservedMinor + params.amountMinor;
-      await client.query('UPDATE budgets SET available_minor = $1, reserved_minor = $2 WHERE id = $3', [
-        newAvailable.toString(),
-        newReserved.toString(),
-        budget.id,
-      ]);
+      await client.query(
+        'UPDATE budgets SET available_minor = $1, reserved_minor = $2 WHERE id = $3',
+        [newAvailable.toString(), newReserved.toString(), budget.id],
+      );
       await insertLedgerEntry(client, {
         ledgerTransactionId,
         budgetId: budget.id,
@@ -72,10 +80,14 @@ export async function reserveBudget(pool: Pool, params: ReserveBudgetParams): Pr
 }
 
 /** Locks and returns a single reservation row by id, or throws NOT_FOUND. */
-export async function getReservationForUpdate(client: PoolClient, reservationId: string): Promise<ReservationRow> {
-  const { rows } = await client.query<RawReservationRow>('SELECT * FROM reservations WHERE id = $1 FOR UPDATE', [
-    reservationId,
-  ]);
+export async function getReservationForUpdate(
+  client: PoolClient,
+  reservationId: string,
+): Promise<ReservationRow> {
+  const { rows } = await client.query<RawReservationRow>(
+    'SELECT * FROM reservations WHERE id = $1 FOR UPDATE',
+    [reservationId],
+  );
   const row = rows[0];
   if (!row) throw new DomainError('NOT_FOUND', `reservation ${reservationId} not found`);
   return mapReservationRow(row);

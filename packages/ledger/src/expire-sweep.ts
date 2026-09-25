@@ -18,7 +18,10 @@ export interface ExpireSweepResult {
  * reservation failing to expire (e.g. a concurrent capture just won the
  * race) never blocks the rest of the sweep.
  */
-export async function sweepExpiredReservations(pool: Pool, clock: Clock = systemClock): Promise<ExpireSweepResult> {
+export async function sweepExpiredReservations(
+  pool: Pool,
+  clock: Clock = systemClock,
+): Promise<ExpireSweepResult> {
   const now = clock.now();
   const { rows } = await pool.query<{ id: string }>(
     `SELECT id FROM reservations WHERE status = 'ACTIVE' AND expires_at < $1`,

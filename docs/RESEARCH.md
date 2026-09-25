@@ -66,11 +66,11 @@ this repo work. `upfront`/`escrow` are out of scope; see
 Many public tutorials still show the **v1** headers `X-PAYMENT` (request)
 and `X-PAYMENT-RESPONSE` (response). **v2 renamed these:**
 
-| Direction | v2 header | Content |
-|---|---|---|
-| Server → Client (402 response) | `PAYMENT-REQUIRED` | base64-encoded JSON `PaymentRequired` object |
-| Client → Server (retry) | `PAYMENT-SIGNATURE` | base64-encoded JSON `PaymentPayload` (signed) |
-| Facilitator → Server (out-of-band, not forwarded to buyer) | `EXTENSION-RESPONSES` | extension-specific outcomes |
+| Direction                                                  | v2 header             | Content                                       |
+| ---------------------------------------------------------- | --------------------- | --------------------------------------------- |
+| Server → Client (402 response)                             | `PAYMENT-REQUIRED`    | base64-encoded JSON `PaymentRequired` object  |
+| Client → Server (retry)                                    | `PAYMENT-SIGNATURE`   | base64-encoded JSON `PaymentPayload` (signed) |
+| Facilitator → Server (out-of-band, not forwarded to buyer) | `EXTENSION-RESPONSES` | extension-specific outcomes                   |
 
 Source: https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/http.md
 
@@ -148,9 +148,9 @@ Source: https://github.com/x402-foundation/x402/blob/main/specs/schemes/exact/sc
 
 CAIP-2 format (`namespace:reference`). Relevant to this project:
 
-| Network | CAIP-2 |
-|---|---|
-| Base mainnet | `eip155:8453` |
+| Network                | CAIP-2         |
+| ---------------------- | -------------- |
+| Base mainnet           | `eip155:8453`  |
 | Base Sepolia (testnet) | `eip155:84532` |
 
 x402 Treasury's demo and manual E2E test target **Base Sepolia**
@@ -162,12 +162,12 @@ config defaults, or tests.
 Verified directly against `registry.npmjs.org` on 2026-09-25 (scoped
 `@x402/*`, published by the x402 Foundation):
 
-| Package | Verified version | Role |
-|---|---|---|
-| `@x402/core` | 2.27.0 | protocol types/schemas (depends on `zod@^3.24.2`) |
-| `@x402/evm` | 2.27.0 | EVM (Base) implementation of the `exact` scheme |
-| `@x402/fastify` | 2.26.0 | Fastify middleware for protected resource servers (peer: `fastify@^5.0.0`) |
-| `@x402/fetch` | 2.27.0 | client-side `fetch` wrapper that handles the 402→sign→retry loop |
+| Package         | Verified version | Role                                                                       |
+| --------------- | ---------------- | -------------------------------------------------------------------------- |
+| `@x402/core`    | 2.27.0           | protocol types/schemas (depends on `zod@^3.24.2`)                          |
+| `@x402/evm`     | 2.27.0           | EVM (Base) implementation of the `exact` scheme                            |
+| `@x402/fastify` | 2.26.0           | Fastify middleware for protected resource servers (peer: `fastify@^5.0.0`) |
+| `@x402/fetch`   | 2.27.0           | client-side `fetch` wrapper that handles the 402→sign→retry loop           |
 
 **Deviation noted:** `@x402/fastify` at 2.26.0 pins `@x402/core@~2.26.0`,
 one patch behind the `@x402/core@2.27.0` latest. This project pins exact
@@ -205,18 +205,18 @@ statement, which is the entire reason this project exists:
 > management... Session handling mechanisms... Spending policy and
 > correlation tracking... Application-specific implementation patterns."
 
-| Capability | Provided by x402 | Provided by x402 Treasury |
-|---|---|---|
-| Payment requirement discovery (402 + `PaymentRequired`) | Yes | — (consumed via adapter) |
-| Signing & submitting a payment | Yes (client SDK) | — (consumed via adapter) |
-| Verifying & settling on-chain | Yes (facilitator) | — (consumed via adapter) |
-| Replay/signature validity, authorization windows | Yes (protocol-level, EIP-3009 nonce + validAfter/validBefore) | — |
-| **Who is allowed to spend, how much, on what** | No | **Yes — policy engine** |
-| **Hierarchical/delegated budgets** | No | **Yes — ledger + delegation graph** |
-| **"Did I already pay for this logical request" across retries** | Partial (nonce prevents re-settling the *same signed payload*) | **Yes — application-level idempotency keyed on caller intent, independent of any one signature** |
-| **Choosing among multiple equivalent paid providers** | No | **Yes — router** |
-| **Recovering from an uncertain settlement (`settlement_pending`, crash mid-flow)** | No | **Yes — reconciliation subsystem** |
-| **Auditable accounting of what was spent, by whom, from where** | No | **Yes — append-only ledger** |
+| Capability                                                                         | Provided by x402                                               | Provided by x402 Treasury                                                                        |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Payment requirement discovery (402 + `PaymentRequired`)                            | Yes                                                            | — (consumed via adapter)                                                                         |
+| Signing & submitting a payment                                                     | Yes (client SDK)                                               | — (consumed via adapter)                                                                         |
+| Verifying & settling on-chain                                                      | Yes (facilitator)                                              | — (consumed via adapter)                                                                         |
+| Replay/signature validity, authorization windows                                   | Yes (protocol-level, EIP-3009 nonce + validAfter/validBefore)  | —                                                                                                |
+| **Who is allowed to spend, how much, on what**                                     | No                                                             | **Yes — policy engine**                                                                          |
+| **Hierarchical/delegated budgets**                                                 | No                                                             | **Yes — ledger + delegation graph**                                                              |
+| **"Did I already pay for this logical request" across retries**                    | Partial (nonce prevents re-settling the _same signed payload_) | **Yes — application-level idempotency keyed on caller intent, independent of any one signature** |
+| **Choosing among multiple equivalent paid providers**                              | No                                                             | **Yes — router**                                                                                 |
+| **Recovering from an uncertain settlement (`settlement_pending`, crash mid-flow)** | No                                                             | **Yes — reconciliation subsystem**                                                               |
+| **Auditable accounting of what was spent, by whom, from where**                    | No                                                             | **Yes — append-only ledger**                                                                     |
 
 This division of responsibility is the core architectural boundary of the
 project: **x402 answers "can this specific signed payment be settled";

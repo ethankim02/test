@@ -46,6 +46,9 @@ export async function authenticate(pool: Pool, request: FastifyRequest): Promise
  */
 export function requireAgentMatch(auth: AuthContext, requestedAgentId: string): void {
   if (auth.agentId !== null && auth.agentId !== requestedAgentId) {
-    throw new DomainError('FORBIDDEN', `this API key is scoped to agent ${auth.agentId} and cannot act as ${requestedAgentId}`);
+    throw new DomainError(
+      'FORBIDDEN',
+      `this API key is scoped to agent ${auth.agentId} and cannot act as ${requestedAgentId}`,
+    );
   }
 }

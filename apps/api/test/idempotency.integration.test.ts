@@ -55,7 +55,10 @@ describe('idempotent payment intent creation', () => {
     }
 
     // Only ONE payment intent row and ONE settlement actually happened.
-    const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM payment_intents WHERE agent_id = $1', [ctx.agentId]);
+    const { rows } = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM payment_intents WHERE agent_id = $1',
+      [ctx.agentId],
+    );
     expect(rows[0]!.n).toBe(1);
 
     const sessionResp = await app.inject({
@@ -87,7 +90,11 @@ describe('idempotent payment intent creation', () => {
       method: 'POST',
       url: '/payments/intents',
       headers: { authorization: `Bearer ${ctx.apiKey}`, 'idempotency-key': idempotencyKey },
-      payload: { agentId: ctx.agentId, sessionId: ctx.sessionId, providerId: '00000000-0000-0000-0000-000000000000' },
+      payload: {
+        agentId: ctx.agentId,
+        sessionId: ctx.sessionId,
+        providerId: '00000000-0000-0000-0000-000000000000',
+      },
     });
     expect(second.statusCode).toBe(409);
     expect(second.json().error.code).toBe('IDEMPOTENCY_CONFLICT');

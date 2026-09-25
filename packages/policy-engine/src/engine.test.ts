@@ -17,7 +17,11 @@ describe('evaluatePolicy', () => {
 
   it('matches the spec example: BLOCK with multiple reason codes when several rules fail at once', () => {
     const configs: PolicyRuleConfig[] = [
-      { ruleType: 'PROVIDER_ALLOWLIST', enabled: true, params: { providerIds: ['some-other-provider'] } },
+      {
+        ruleType: 'PROVIDER_ALLOWLIST',
+        enabled: true,
+        params: { providerIds: ['some-other-provider'] },
+      },
       { ruleType: 'UNKNOWN_PROVIDER_LIMIT', enabled: true, params: { maxAmountMinor: '50000' } },
     ];
     const ctx = baseContext({
@@ -29,7 +33,11 @@ describe('evaluatePolicy', () => {
 
     expect(decision.decision).toBe('BLOCK');
     expect(decision.reasonCodes).toEqual(
-      expect.arrayContaining(['SESSION_BUDGET_EXCEEDED', 'PROVIDER_NOT_ALLOWED', 'UNKNOWN_PROVIDER_LIMIT_EXCEEDED']),
+      expect.arrayContaining([
+        'SESSION_BUDGET_EXCEEDED',
+        'PROVIDER_NOT_ALLOWED',
+        'UNKNOWN_PROVIDER_LIMIT_EXCEEDED',
+      ]),
     );
     // Every configured rule ran — not just the first failure.
     expect(decision.evaluatedRules).toHaveLength(3); // built-in session rule + 2 configured
@@ -50,7 +58,10 @@ describe('evaluatePolicy', () => {
     const configs: PolicyRuleConfig[] = [
       { ruleType: 'HUMAN_APPROVAL_THRESHOLD', enabled: true, params: { thresholdMinor: '10000' } },
     ];
-    const decision = evaluatePolicy(baseContext({ amountMinor: 20_000n, sessionAvailableMinor: 1_000_000n }), configs);
+    const decision = evaluatePolicy(
+      baseContext({ amountMinor: 20_000n, sessionAvailableMinor: 1_000_000n }),
+      configs,
+    );
     expect(decision.decision).toBe('REVIEW');
   });
 
@@ -63,7 +74,10 @@ describe('evaluatePolicy', () => {
   });
 
   it('always evaluates the built-in session budget rule even with zero configured policies', () => {
-    const decision = evaluatePolicy(baseContext({ amountMinor: 2_000_000n, sessionAvailableMinor: 1_000_000n }), []);
+    const decision = evaluatePolicy(
+      baseContext({ amountMinor: 2_000_000n, sessionAvailableMinor: 1_000_000n }),
+      [],
+    );
     expect(decision.decision).toBe('BLOCK');
     expect(decision.reasonCodes).toEqual(['SESSION_BUDGET_EXCEEDED']);
   });
@@ -79,7 +93,9 @@ describe('evaluatePolicy', () => {
   });
 
   it('throws a config error (not a spending decision) for an unknown rule_type', () => {
-    const configs: PolicyRuleConfig[] = [{ ruleType: 'NOT_A_REAL_RULE', enabled: true, params: {} }];
+    const configs: PolicyRuleConfig[] = [
+      { ruleType: 'NOT_A_REAL_RULE', enabled: true, params: {} },
+    ];
     expect(() => evaluatePolicy(baseContext(), configs)).toThrow(DomainError);
   });
 });

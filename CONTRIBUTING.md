@@ -37,4 +37,4 @@ pnpm test:integration  # requires a running Postgres (see docker-compose.yml)
 ## Commit style
 
 Conventional-commit-style prefixes (`feat:`, `fix:`, `docs:`, `test:`,
-`chore:`) with a message that explains *why*, matching the existing log.
+`chore:`) with a message that explains _why_, matching the existing log.

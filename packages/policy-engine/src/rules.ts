@@ -5,7 +5,10 @@ import type { RuleEvaluation, RuleFn } from './types.js';
 // blindly from the `policies.params` jsonb column, since that column is
 // operator-editable (potentially via the API) and a malformed rule should
 // fail loudly, not silently no-op.
-const bigintString = z.string().regex(/^\d+$/).transform((s) => BigInt(s));
+const bigintString = z
+  .string()
+  .regex(/^\d+$/)
+  .transform((s) => BigInt(s));
 
 function allow(ruleType: string, detail: string): RuleEvaluation {
   return { ruleType, verdict: 'ALLOW', detail };
@@ -86,7 +89,10 @@ const CategoryDailyLimitParams = z.object({ category: z.string(), maxAmountMinor
 export const categoryDailyLimit: RuleFn = (ctx, rawParams) => {
   const params = CategoryDailyLimitParams.parse(rawParams);
   if (ctx.provider.category !== params.category) {
-    return allow('CATEGORY_DAILY_LIMIT', `rule scoped to category "${params.category}", request is "${ctx.provider.category}"`);
+    return allow(
+      'CATEGORY_DAILY_LIMIT',
+      `rule scoped to category "${params.category}", request is "${ctx.provider.category}"`,
+    );
   }
   const projected = ctx.categoryDailySpentMinor + ctx.amountMinor;
   if (projected > params.maxAmountMinor) {
@@ -138,7 +144,10 @@ const UnknownProviderLimitParams = z.object({ maxAmountMinor: bigintString });
 export const unknownProviderLimit: RuleFn = (ctx, rawParams) => {
   const params = UnknownProviderLimitParams.parse(rawParams);
   if (ctx.provider.trustStatus !== 'UNKNOWN') {
-    return allow('UNKNOWN_PROVIDER_LIMIT', `provider trust status is ${ctx.provider.trustStatus}, rule not applicable`);
+    return allow(
+      'UNKNOWN_PROVIDER_LIMIT',
+      `provider trust status is ${ctx.provider.trustStatus}, rule not applicable`,
+    );
   }
   if (ctx.amountMinor > params.maxAmountMinor) {
     return {
@@ -180,11 +189,16 @@ export const duplicatePaymentWindow: RuleFn = (ctx, rawParams) => {
 // PaymentVelocityLimit — too many payments in a rolling window, regardless
 // of amount (catches a runaway loop, not just an expensive one).
 // ---------------------------------------------------------------------------
-const PaymentVelocityLimitParams = z.object({ windowSeconds: z.number().positive(), maxCount: z.number().int().positive() });
+const PaymentVelocityLimitParams = z.object({
+  windowSeconds: z.number().positive(),
+  maxCount: z.number().int().positive(),
+});
 export const paymentVelocityLimit: RuleFn = (ctx, rawParams) => {
   const params = PaymentVelocityLimitParams.parse(rawParams);
   const windowStart = ctx.now.getTime() - params.windowSeconds * 1000;
-  const countInWindow = ctx.recentPayments.filter((p) => p.createdAt.getTime() >= windowStart).length;
+  const countInWindow = ctx.recentPayments.filter(
+    (p) => p.createdAt.getTime() >= windowStart,
+  ).length;
   if (countInWindow + 1 > params.maxCount) {
     return {
       ruleType: 'PAYMENT_VELOCITY_LIMIT',

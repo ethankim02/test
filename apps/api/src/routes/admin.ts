@@ -46,7 +46,10 @@ export function registerAdminRoutes(app: FastifyInstance, pool: Pool): void {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const { rows } = await client.query<{ id: string }>('INSERT INTO organizations (name) VALUES ($1) RETURNING id', [body.name]);
+      const { rows } = await client.query<{ id: string }>(
+        'INSERT INTO organizations (name) VALUES ($1) RETURNING id',
+        [body.name],
+      );
       const orgId = rows[0]!.id;
       const allocated = fromDecimalString(body.dailyBudget, 'USDC');
       await client.query(
@@ -114,7 +117,12 @@ export function registerAdminRoutes(app: FastifyInstance, pool: Pool): void {
         allocatedMinor: allocated.amountMinor,
       });
 
-      reply.status(201).send({ id: agentId, name: body.name, parentAgentId: body.parentAgentId ?? null, budget: await budgetSummary(pool, agentBudget.id) });
+      reply.status(201).send({
+        id: agentId,
+        name: body.name,
+        parentAgentId: body.parentAgentId ?? null,
+        budget: await budgetSummary(pool, agentBudget.id),
+      });
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {});
       throw err;
@@ -126,15 +134,26 @@ export function registerAdminRoutes(app: FastifyInstance, pool: Pool): void {
   app.get('/agents/:id', async (request, reply) => {
     await authenticate(pool, request);
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
-    const { rows } = await pool.query<{ id: string; name: string; parent_agent_id: string | null; status: string }>(
-      'SELECT id, name, parent_agent_id, status FROM agents WHERE id = $1',
-      [id],
-    );
+    const { rows } = await pool.query<{
+      id: string;
+      name: string;
+      parent_agent_id: string | null;
+      status: string;
+    }>('SELECT id, name, parent_agent_id, status FROM agents WHERE id = $1', [id]);
     const agent = rows[0];
     if (!agent) throw notFound('agent', id);
-    const { rows: budgetRows } = await pool.query<{ id: string }>(`SELECT id FROM budgets WHERE agent_id = $1 AND scope = 'AGENT'`, [id]);
+    const { rows: budgetRows } = await pool.query<{ id: string }>(
+      `SELECT id FROM budgets WHERE agent_id = $1 AND scope = 'AGENT'`,
+      [id],
+    );
     const budget = budgetRows[0] ? await budgetSummary(pool, budgetRows[0].id) : null;
-    reply.send({ id: agent.id, name: agent.name, parentAgentId: agent.parent_agent_id, status: agent.status, budget });
+    reply.send({
+      id: agent.id,
+      name: agent.name,
+      parentAgentId: agent.parent_agent_id,
+      status: agent.status,
+      budget,
+    });
   });
 
   app.post('/sessions', async (request, reply) => {
@@ -170,7 +189,11 @@ export function registerAdminRoutes(app: FastifyInstance, pool: Pool): void {
     await getBudget(pool, id); // throws NOT_FOUND if missing
     const summary = await budgetSummary(pool, id);
 
-    const { rows: byProvider } = await pool.query<{ provider_name: string; total: string; count: string }>(
+    const { rows: byProvider } = await pool.query<{
+      provider_name: string;
+      total: string;
+      count: string;
+    }>(
       `SELECT p.name AS provider_name, COALESCE(SUM(pi.amount_minor), 0)::text AS total, COUNT(*)::text AS count
        FROM payment_intents pi
        JOIN providers p ON p.id = pi.provider_id
@@ -181,18 +204,34 @@ export function registerAdminRoutes(app: FastifyInstance, pool: Pool): void {
 
     reply.send({
       ...summary,
-      byProvider: byProvider.map((r) => ({ provider: r.provider_name, spentMinor: r.total, paymentCount: Number(r.count) })),
+      byProvider: byProvider.map((r) => ({
+        provider: r.provider_name,
+        spentMinor: r.total,
+        paymentCount: Number(r.count),
+      })),
     });
   });
 
   app.post('/providers', async (request, reply) => {
     const auth = await authenticate(pool, request);
     const body = CreateProviderSchema.parse(request.body);
-    const configuredPriceMinor = body.configuredPrice ? fromDecimalString(body.configuredPrice, 'USDC').amountMinor : null;
+    const configuredPriceMinor = body.configuredPrice
+      ? fromDecimalString(body.configuredPrice, 'USDC').amountMinor
+      : null;
     const { rows } = await pool.query<{ id: string }>(
       `INSERT INTO providers (org_id, name, base_url, resource_path, category, network, configured_price_minor, trust_status, pay_to)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-      [auth.orgId, body.name, body.baseUrl, body.resourcePath, body.category, body.network, configuredPriceMinor?.toString() ?? null, body.trustStatus, body.payTo ?? null],
+      [
+        auth.orgId,
+        body.name,
+        body.baseUrl,
+        body.resourcePath,
+        body.category,
+        body.network,
+        configuredPriceMinor?.toString() ?? null,
+        body.trustStatus,
+        body.payTo ?? null,
+      ],
     );
     reply.status(201).send({ id: rows[0]!.id, ...body });
   });
@@ -212,7 +251,14 @@ export function registerAdminRoutes(app: FastifyInstance, pool: Pool): void {
     const body = CreatePolicySchema.parse(request.body);
     const { rows } = await pool.query<{ id: string }>(
       `INSERT INTO policies (org_id, scope, agent_id, rule_type, params, enabled) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [auth.orgId, body.scope, body.agentId ?? null, body.ruleType, JSON.stringify(body.params), body.enabled],
+      [
+        auth.orgId,
+        body.scope,
+        body.agentId ?? null,
+        body.ruleType,
+        JSON.stringify(body.params),
+        body.enabled,
+      ],
     );
     reply.status(201).send({ id: rows[0]!.id, ...body });
   });

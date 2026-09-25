@@ -81,7 +81,10 @@ export interface CreatePaymentIntentParams {
 }
 
 /** Creates a payment intent in CREATED state. Does not evaluate policy or reserve funds. */
-export async function createPaymentIntent(pool: Pool, params: CreatePaymentIntentParams): Promise<PaymentIntentRow> {
+export async function createPaymentIntent(
+  pool: Pool,
+  params: CreatePaymentIntentParams,
+): Promise<PaymentIntentRow> {
   const { rows } = await pool.query<RawPaymentIntentRow>(
     `INSERT INTO payment_intents
        (org_id, agent_id, session_budget_id, provider_id, amount_minor, asset, network, state, idempotency_key_id, request_fingerprint)
@@ -102,14 +105,18 @@ export async function createPaymentIntent(pool: Pool, params: CreatePaymentInten
   const row = rows[0];
   if (!row) throw new Error('payment intent insert returned no row');
   const intent = mapRow(row);
-  await pool.query(`INSERT INTO payment_state_transitions (payment_intent_id, from_state, to_state) VALUES ($1, NULL, 'CREATED')`, [
-    intent.id,
-  ]);
+  await pool.query(
+    `INSERT INTO payment_state_transitions (payment_intent_id, from_state, to_state) VALUES ($1, NULL, 'CREATED')`,
+    [intent.id],
+  );
   return intent;
 }
 
 export async function getPaymentIntent(pool: Pool, id: string): Promise<PaymentIntentRow> {
-  const { rows } = await pool.query<RawPaymentIntentRow>('SELECT * FROM payment_intents WHERE id = $1', [id]);
+  const { rows } = await pool.query<RawPaymentIntentRow>(
+    'SELECT * FROM payment_intents WHERE id = $1',
+    [id],
+  );
   const row = rows[0];
   if (!row) throw new DomainError('NOT_FOUND', `payment intent ${id} not found`);
   return mapRow(row);
@@ -119,7 +126,10 @@ export interface TransitionOptions {
   reason?: string;
   /** Extra columns to set atomically with the transition, e.g. reservationId, settlementTxHash. */
   patch?: Partial<
-    Pick<PaymentIntentRow, 'reservationId' | 'routingDecisionId' | 'failureReason' | 'settlementTxHash' | 'x402Payload'>
+    Pick<
+      PaymentIntentRow,
+      'reservationId' | 'routingDecisionId' | 'failureReason' | 'settlementTxHash' | 'x402Payload'
+    >
   >;
 }
 

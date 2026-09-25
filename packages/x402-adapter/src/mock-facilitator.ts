@@ -29,7 +29,10 @@ export interface MockSettleResult {
   errorReason?: string;
 }
 
-export function mockVerify(payload: PaymentPayloadWire, requirements: PaymentRequirementsWire): MockVerifyResult {
+export function mockVerify(
+  payload: PaymentPayloadWire,
+  requirements: PaymentRequirementsWire,
+): MockVerifyResult {
   if (payload.x402Version !== 2) {
     return { isValid: false, invalidReason: `unsupported x402Version ${payload.x402Version}` };
   }
@@ -41,15 +44,25 @@ export function mockVerify(payload: PaymentPayloadWire, requirements: PaymentReq
     accepted.asset === requirements.asset &&
     accepted.payTo === requirements.payTo;
   if (!matches) {
-    return { isValid: false, invalidReason: 'payload.accepted does not match the offered requirements' };
+    return {
+      isValid: false,
+      invalidReason: 'payload.accepted does not match the offered requirements',
+    };
   }
   if (payload.payload?.['mock'] !== true) {
-    return { isValid: false, invalidReason: 'missing mock payment payload marker — this facilitator only accepts mock payloads' };
+    return {
+      isValid: false,
+      invalidReason:
+        'missing mock payment payload marker — this facilitator only accepts mock payloads',
+    };
   }
   return { isValid: true };
 }
 
-export function mockSettle(payload: PaymentPayloadWire, requirements: PaymentRequirementsWire): MockSettleResult {
+export function mockSettle(
+  payload: PaymentPayloadWire,
+  requirements: PaymentRequirementsWire,
+): MockSettleResult {
   const verify = mockVerify(payload, requirements);
   if (!verify.isValid) {
     return verify.invalidReason !== undefined

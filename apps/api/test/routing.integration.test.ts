@@ -19,7 +19,11 @@ describe('POST /routes/evaluate', () => {
   });
 
   async function seedOrgWithProviders(): Promise<string> {
-    const orgResp = await app.inject({ method: 'POST', url: '/organizations', payload: { name: 'Routing Org', dailyBudget: '100' } });
+    const orgResp = await app.inject({
+      method: 'POST',
+      url: '/organizations',
+      payload: { name: 'Routing Org', dailyBudget: '100' },
+    });
     const apiKey = orgResp.json().apiKey;
 
     const providers = [
@@ -95,12 +99,18 @@ describe('POST /routes/evaluate', () => {
       payload: { category: 'search', objective: 'cheapest', maxLatencyMs: 1000 },
     });
     const body = resp.json();
-    expect(body.rejected.map((r: { provider: { name: string } }) => r.provider.name)).toContain('Cheap Slow');
+    expect(body.rejected.map((r: { provider: { name: string } }) => r.provider.name)).toContain(
+      'Cheap Slow',
+    );
     expect(body.selected.name).toBe('Balanced');
   });
 
   it('persists an auditable routing decision when sessionBudgetId is provided', async () => {
-    const orgResp = await app.inject({ method: 'POST', url: '/organizations', payload: { name: 'Audit Org', dailyBudget: '10' } });
+    const orgResp = await app.inject({
+      method: 'POST',
+      url: '/organizations',
+      payload: { name: 'Audit Org', dailyBudget: '10' },
+    });
     const apiKey = orgResp.json().apiKey;
     const agentResp = await app.inject({
       method: 'POST',
@@ -118,18 +128,32 @@ describe('POST /routes/evaluate', () => {
       method: 'POST',
       url: '/providers',
       headers: { authorization: `Bearer ${apiKey}` },
-      payload: { name: 'P', baseUrl: 'http://localhost:9', resourcePath: '/r', category: 'search', network: 'eip155:84532', configuredPrice: '0.01', trustStatus: 'TRUSTED' },
+      payload: {
+        name: 'P',
+        baseUrl: 'http://localhost:9',
+        resourcePath: '/r',
+        category: 'search',
+        network: 'eip155:84532',
+        configuredPrice: '0.01',
+        trustStatus: 'TRUSTED',
+      },
     });
 
     const resp = await app.inject({
       method: 'POST',
       url: '/routes/evaluate',
       headers: { authorization: `Bearer ${apiKey}` },
-      payload: { category: 'search', objective: 'cheapest', sessionBudgetId: sessionResp.json().id },
+      payload: {
+        category: 'search',
+        objective: 'cheapest',
+        sessionBudgetId: sessionResp.json().id,
+      },
     });
     expect(resp.json().decisionId).toBeTruthy();
 
-    const { rows } = await pool.query('SELECT * FROM routing_decisions WHERE id = $1', [resp.json().decisionId]);
+    const { rows } = await pool.query('SELECT * FROM routing_decisions WHERE id = $1', [
+      resp.json().decisionId,
+    ]);
     expect(rows).toHaveLength(1);
   });
 });

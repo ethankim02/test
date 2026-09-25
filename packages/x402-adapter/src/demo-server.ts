@@ -58,14 +58,19 @@ export function createDemoResourceServer(tiers: DemoTier[]): FastifyInstance {
       await sleep(tier.latencyMs);
 
       if (Math.random() > tier.successRate) {
-        reply.status(503).send({ error: `${tier.label} is simulating unavailability this request (demo unreliability model)` });
+        reply.status(503).send({
+          error: `${tier.label} is simulating unavailability this request (demo unreliability model)`,
+        });
         return;
       }
 
       const sigHeader = request.headers[PAYMENT_SIGNATURE_HEADER.toLowerCase()];
       if (!sigHeader || Array.isArray(sigHeader)) {
         const required: PaymentRequiredWire = { x402Version: 2, accepts: [requirements] };
-        reply.status(402).header(PAYMENT_REQUIRED_HEADER, encodeHeader(required)).send({ error: 'payment required', tier: tier.label });
+        reply
+          .status(402)
+          .header(PAYMENT_REQUIRED_HEADER, encodeHeader(required))
+          .send({ error: 'payment required', tier: tier.label });
         return;
       }
 
@@ -84,7 +89,10 @@ export function createDemoResourceServer(tiers: DemoTier[]): FastifyInstance {
     });
   }
 
-  app.get('/health', async () => ({ status: 'ok', tiers: tiers.map((t) => ({ path: t.path, label: t.label })) }));
+  app.get('/health', async () => ({
+    status: 'ok',
+    tiers: tiers.map((t) => ({ path: t.path, label: t.label })),
+  }));
 
   return app;
 }

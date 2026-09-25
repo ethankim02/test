@@ -73,7 +73,11 @@ describe('concurrent reservations against a shared budget', () => {
 
   it('also enforces the invariant at every ancestor level simultaneously', async () => {
     // Two sibling sessions under the same agent, agent budget too small for both to fully succeed.
-    const { agentBudget, sessionBudget: sessionA, orgBudget } = await createTestHierarchy(pool, {
+    const {
+      agentBudget,
+      sessionBudget: sessionA,
+      orgBudget,
+    } = await createTestHierarchy(pool, {
       org: 100_000_000n,
       agent: 1_000_000n, // $1.00 — the actual binding constraint
       session: 1_000_000n, // each session individually allows $1.00
@@ -93,7 +97,12 @@ describe('concurrent reservations against a shared budget', () => {
         amountMinor: 700_000n,
         ttlSeconds: 60,
       }),
-      reserveBudget(pool, { leafBudgetId: sessionBId, agentId: sessionA.agentId!, amountMinor: 700_000n, ttlSeconds: 60 }),
+      reserveBudget(pool, {
+        leafBudgetId: sessionBId,
+        agentId: sessionA.agentId!,
+        amountMinor: 700_000n,
+        ttlSeconds: 60,
+      }),
     ]);
 
     const outcomes = [resultA.status, resultB.status];

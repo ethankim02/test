@@ -9,7 +9,9 @@ const adapter = new MockX402Adapter();
 
 const app = buildApp({ pool, adapter, logger: { level: config.API_LOG_LEVEL } });
 
-app.log.warn('PAYMENT MODE: MOCK — no real blockchain settlement. See docs/RESEARCH.md §12 for how to run against Base Sepolia.');
+app.log.warn(
+  'PAYMENT MODE: MOCK — no real blockchain settlement. See docs/RESEARCH.md §12 for how to run against Base Sepolia.',
+);
 
 try {
   await app.listen({ port: config.API_PORT, host: '0.0.0.0' });

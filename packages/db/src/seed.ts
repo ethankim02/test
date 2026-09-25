@@ -24,7 +24,10 @@ export async function seed(connectionString: string): Promise<{ orgId: string; a
       return { orgId: existing[0].id, apiKey: '(not re-printed — see original seed output)' };
     }
 
-    const [org] = await db.insert(schema.organizations).values({ name: 'Acme Research' }).returning();
+    const [org] = await db
+      .insert(schema.organizations)
+      .values({ name: 'Acme Research' })
+      .returning();
     if (!org) throw new Error('failed to insert organization');
 
     const orgBudgetAllocated = 100_000_000n; // $100.00 USDC
@@ -133,12 +136,42 @@ export async function seed(connectionString: string): Promise<{ orgId: string; a
     if (!providerA || !providerB || !providerC) throw new Error('failed to insert providers');
 
     await db.insert(schema.providerMetrics).values([
-      { providerId: providerA.id, observedPriceMinor: 10_000n, observedLatencyMs: 1420, observedSuccess: true },
-      { providerId: providerA.id, observedPriceMinor: 10_000n, observedLatencyMs: 1510, observedSuccess: true },
-      { providerId: providerB.id, observedPriceMinor: 30_000n, observedLatencyMs: 281, observedSuccess: true },
-      { providerId: providerB.id, observedPriceMinor: 30_000n, observedLatencyMs: 305, observedSuccess: true },
-      { providerId: providerC.id, observedPriceMinor: 15_000n, observedLatencyMs: 650, observedSuccess: true },
-      { providerId: providerC.id, observedPriceMinor: 15_000n, observedLatencyMs: 690, observedSuccess: false },
+      {
+        providerId: providerA.id,
+        observedPriceMinor: 10_000n,
+        observedLatencyMs: 1420,
+        observedSuccess: true,
+      },
+      {
+        providerId: providerA.id,
+        observedPriceMinor: 10_000n,
+        observedLatencyMs: 1510,
+        observedSuccess: true,
+      },
+      {
+        providerId: providerB.id,
+        observedPriceMinor: 30_000n,
+        observedLatencyMs: 281,
+        observedSuccess: true,
+      },
+      {
+        providerId: providerB.id,
+        observedPriceMinor: 30_000n,
+        observedLatencyMs: 305,
+        observedSuccess: true,
+      },
+      {
+        providerId: providerC.id,
+        observedPriceMinor: 15_000n,
+        observedLatencyMs: 650,
+        observedSuccess: true,
+      },
+      {
+        providerId: providerC.id,
+        observedPriceMinor: 15_000n,
+        observedLatencyMs: 690,
+        observedSuccess: false,
+      },
     ]);
 
     await db.insert(schema.policies).values([

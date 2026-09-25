@@ -49,11 +49,10 @@ export async function settleReservation(
       const newReserved = budget.reservedMinor - reservation.amountMinor;
       if (kind === 'CAPTURE') {
         const newSpent = budget.spentMinor + reservation.amountMinor;
-        await client.query('UPDATE budgets SET reserved_minor = $1, spent_minor = $2 WHERE id = $3', [
-          newReserved.toString(),
-          newSpent.toString(),
-          budget.id,
-        ]);
+        await client.query(
+          'UPDATE budgets SET reserved_minor = $1, spent_minor = $2 WHERE id = $3',
+          [newReserved.toString(), newSpent.toString(), budget.id],
+        );
         await insertLedgerEntry(client, {
           ledgerTransactionId,
           budgetId: budget.id,
@@ -64,11 +63,10 @@ export async function settleReservation(
         });
       } else {
         const newAvailable = budget.availableMinor + reservation.amountMinor;
-        await client.query('UPDATE budgets SET reserved_minor = $1, available_minor = $2 WHERE id = $3', [
-          newReserved.toString(),
-          newAvailable.toString(),
-          budget.id,
-        ]);
+        await client.query(
+          'UPDATE budgets SET reserved_minor = $1, available_minor = $2 WHERE id = $3',
+          [newReserved.toString(), newAvailable.toString(), budget.id],
+        );
         await insertLedgerEntry(client, {
           ledgerTransactionId,
           budgetId: budget.id,

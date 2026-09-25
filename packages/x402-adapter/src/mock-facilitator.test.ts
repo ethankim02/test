@@ -26,7 +26,10 @@ describe('mockVerify', () => {
   });
 
   it('rejects a payload whose accepted requirements do not match what was offered', () => {
-    const result = mockVerify({ ...validPayload(), accepted: { ...requirements, amount: '999' } }, requirements);
+    const result = mockVerify(
+      { ...validPayload(), accepted: { ...requirements, amount: '999' } },
+      requirements,
+    );
     expect(result.isValid).toBe(false);
   });
 

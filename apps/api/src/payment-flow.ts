@@ -7,7 +7,11 @@ import {
   reserveBudget,
   transitionPaymentIntent,
 } from '@x402-treasury/ledger';
-import { evaluatePolicy, type PolicyRuleConfig, type RuleEvaluation } from '@x402-treasury/policy-engine';
+import {
+  evaluatePolicy,
+  type PolicyRuleConfig,
+  type RuleEvaluation,
+} from '@x402-treasury/policy-engine';
 import type { PaymentRail } from '@x402-treasury/x402-adapter';
 import type { Pool } from 'pg';
 import { attachPaymentIntent, claimIdempotencyKey, completeIdempotencyKey } from './idempotency.js';
@@ -43,15 +47,34 @@ const RECENT_WINDOW_SECONDS = 300;
  * release. See docs/ARCHITECTURE.md §2 for the sequence diagram this
  * function implements.
  */
-export async function executePayment(pool: Pool, adapter: PaymentRail, params: ExecutePaymentParams): Promise<ExecutePaymentResult> {
-  const claim = await claimIdempotencyKey(pool, params.agentId, params.idempotencyKey, params.requestHash);
+export async function executePayment(
+  pool: Pool,
+  adapter: PaymentRail,
+  params: ExecutePaymentParams,
+): Promise<ExecutePaymentResult> {
+  const claim = await claimIdempotencyKey(
+    pool,
+    params.agentId,
+    params.idempotencyKey,
+    params.requestHash,
+  );
 
   if (!claim.isNew) {
     if (claim.responseBody !== null && claim.responseBody !== undefined) {
-      return { httpStatus: 200, body: { ...(claim.responseBody as Record<string, unknown>), idempotentReplay: true } };
+      return {
+        httpStatus: 200,
+        body: { ...(claim.responseBody as Record<string, unknown>), idempotentReplay: true },
+      };
     }
     if (claim.paymentIntentId) {
-      return { httpStatus: 202, body: { paymentIntentId: claim.paymentIntentId, status: 'PROCESSING', idempotentReplay: true } };
+      return {
+        httpStatus: 202,
+        body: {
+          paymentIntentId: claim.paymentIntentId,
+          status: 'PROCESSING',
+          idempotentReplay: true,
+        },
+      };
     }
     return { httpStatus: 202, body: { status: 'PROCESSING', idempotentReplay: true } };
   }
@@ -64,7 +87,9 @@ export async function executePayment(pool: Pool, adapter: PaymentRail, params: E
     resource_path: string;
     category: string;
     trust_status: 'TRUSTED' | 'KNOWN' | 'UNKNOWN';
-  }>('SELECT base_url, resource_path, category, trust_status FROM providers WHERE id = $1', [params.providerId]);
+  }>('SELECT base_url, resource_path, category, trust_status FROM providers WHERE id = $1', [
+    params.providerId,
+  ]);
   const provider = providerRows[0];
   if (!provider) throw notFound('provider', params.providerId);
   const providerUrl = `${provider.base_url}${provider.resource_path}`;
@@ -91,12 +116,20 @@ export async function executePayment(pool: Pool, adapter: PaymentRail, params: E
 
   await transitionPaymentIntent(pool, intent.id, 'POLICY_EVALUATING');
 
-  const { rows: policyRows } = await pool.query<{ rule_type: string; enabled: boolean; params: unknown }>(
+  const { rows: policyRows } = await pool.query<{
+    rule_type: string;
+    enabled: boolean;
+    params: unknown;
+  }>(
     `SELECT rule_type, enabled, params FROM policies
      WHERE org_id = $1 AND enabled = true AND (scope = 'ORG' OR (scope = 'AGENT' AND agent_id = $2))`,
     [params.orgId, params.agentId],
   );
-  const policyConfigs: PolicyRuleConfig[] = policyRows.map((r) => ({ ruleType: r.rule_type, enabled: r.enabled, params: r.params }));
+  const policyConfigs: PolicyRuleConfig[] = policyRows.map((r) => ({
+    ruleType: r.rule_type,
+    enabled: r.enabled,
+    params: r.params,
+  }));
 
   const policyContext = await buildPolicyContext(pool, {
     agentId: params.agentId,
@@ -117,7 +150,10 @@ export async function executePayment(pool: Pool, adapter: PaymentRail, params: E
 
   if (decision.decision === 'BLOCK' || decision.decision === 'REVIEW') {
     await transitionPaymentIntent(pool, intent.id, 'POLICY_REJECTED', {
-      reason: decision.decision === 'REVIEW' ? 'human approval required (not auto-resolvable in this MVP)' : decision.reasonCodes.join(','),
+      reason:
+        decision.decision === 'REVIEW'
+          ? 'human approval required (not auto-resolvable in this MVP)'
+          : decision.reasonCodes.join(','),
     });
     const body = {
       paymentIntentId: intent.id,
@@ -142,7 +178,9 @@ export async function executePayment(pool: Pool, adapter: PaymentRail, params: E
     });
   } catch (err) {
     if (err instanceof DomainError && err.code === 'INSUFFICIENT_BUDGET') {
-      await transitionPaymentIntent(pool, intent.id, 'FAILED', { reason: 'lost the race for budget between policy check and reservation' });
+      await transitionPaymentIntent(pool, intent.id, 'FAILED', {
+        reason: 'lost the race for budget between policy check and reservation',
+      });
       const body = {
         paymentIntentId: intent.id,
         decision: 'BLOCK' as const,
@@ -155,18 +193,35 @@ export async function executePayment(pool: Pool, adapter: PaymentRail, params: E
     throw err;
   }
 
-  await transitionPaymentIntent(pool, intent.id, 'RESERVED', { patch: { reservationId: reservation.id } });
+  await transitionPaymentIntent(pool, intent.id, 'RESERVED', {
+    patch: { reservationId: reservation.id },
+  });
 
-  const signed = await adapter.preparePayment(requirements, { url: providerUrl }, { agentId: params.agentId });
-  await transitionPaymentIntent(pool, intent.id, 'PAYMENT_PREPARED', { patch: { x402Payload: signed.raw } });
+  const signed = await adapter.preparePayment(
+    requirements,
+    { url: providerUrl },
+    { agentId: params.agentId },
+  );
+  await transitionPaymentIntent(pool, intent.id, 'PAYMENT_PREPARED', {
+    patch: { x402Payload: signed.raw },
+  });
 
   await transitionPaymentIntent(pool, intent.id, 'VERIFYING');
   const verifyResult = await adapter.verifyPayment(signed, requirements);
   if (!verifyResult.isValid) {
-    await transitionPaymentIntent(pool, intent.id, 'FAILED', { reason: verifyResult.invalidReason ?? 'payment verification failed' });
+    await transitionPaymentIntent(pool, intent.id, 'FAILED', {
+      reason: verifyResult.invalidReason ?? 'payment verification failed',
+    });
     await releaseReservation(pool, reservation.id);
-    await transitionPaymentIntent(pool, intent.id, 'RESERVATION_RELEASED', { reason: 'released after failed verification' });
-    const body = { paymentIntentId: intent.id, decision: 'BLOCK' as const, reasonCodes: ['SETTLEMENT_FAILED'] as ReasonCode[], state: 'RESERVATION_RELEASED' };
+    await transitionPaymentIntent(pool, intent.id, 'RESERVATION_RELEASED', {
+      reason: 'released after failed verification',
+    });
+    const body = {
+      paymentIntentId: intent.id,
+      decision: 'BLOCK' as const,
+      reasonCodes: ['SETTLEMENT_FAILED'] as ReasonCode[],
+      state: 'RESERVATION_RELEASED',
+    };
     await completeIdempotencyKey(pool, claim.id, body);
     return { httpStatus: 402, body };
   }
@@ -211,9 +266,13 @@ export async function executePayment(pool: Pool, adapter: PaymentRail, params: E
   }
 
   // FAILED or PENDING-that-we-don't-trust: fail safe and release funds.
-  await transitionPaymentIntent(pool, intent.id, 'FAILED', { reason: settleResult.errorReason ?? 'settlement failed' });
+  await transitionPaymentIntent(pool, intent.id, 'FAILED', {
+    reason: settleResult.errorReason ?? 'settlement failed',
+  });
   await releaseReservation(pool, reservation.id);
-  await transitionPaymentIntent(pool, intent.id, 'RESERVATION_RELEASED', { reason: 'released after failed settlement' });
+  await transitionPaymentIntent(pool, intent.id, 'RESERVATION_RELEASED', {
+    reason: 'released after failed settlement',
+  });
   const body = {
     paymentIntentId: intent.id,
     decision: 'BLOCK' as const,

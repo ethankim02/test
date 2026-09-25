@@ -1,5 +1,10 @@
 import { fromDecimalString } from '@x402-treasury/shared';
-import { DEFAULT_BALANCED_WEIGHTS, route, type ProviderCandidate, type RoutingObjective } from '@x402-treasury/router';
+import {
+  DEFAULT_BALANCED_WEIGHTS,
+  route,
+  type ProviderCandidate,
+  type RoutingObjective,
+} from '@x402-treasury/router';
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
@@ -60,7 +65,9 @@ export function registerRoutingRoutes(app: FastifyInstance, pool: Pool): void {
     const objective = body.objective as RoutingObjective;
     const result = route(candidates, {
       objective,
-      maxPriceMinor: body.maxPrice ? fromDecimalString(body.maxPrice, 'USDC').amountMinor : undefined,
+      maxPriceMinor: body.maxPrice
+        ? fromDecimalString(body.maxPrice, 'USDC').amountMinor
+        : undefined,
       maxLatencyMs: body.maxLatencyMs,
       minSuccessRate: body.minSuccessRate,
       weights: body.weights ?? (objective === 'balanced' ? DEFAULT_BALANCED_WEIGHTS : undefined),
@@ -73,7 +80,12 @@ export function registerRoutingRoutes(app: FastifyInstance, pool: Pool): void {
          VALUES ($1, $2, $3, $4, $5) RETURNING id`,
         [
           body.sessionBudgetId,
-          JSON.stringify({ maxPrice: body.maxPrice, maxLatencyMs: body.maxLatencyMs, minSuccessRate: body.minSuccessRate, objective }),
+          JSON.stringify({
+            maxPrice: body.maxPrice,
+            maxLatencyMs: body.maxLatencyMs,
+            minSuccessRate: body.minSuccessRate,
+            objective,
+          }),
           JSON.stringify({
             scored: result.scored.map((s) => ({ providerId: s.provider.id, score: s.score })),
             rejected: result.rejected.map((r) => ({ providerId: r.provider.id, reason: r.reason })),
@@ -89,8 +101,14 @@ export function registerRoutingRoutes(app: FastifyInstance, pool: Pool): void {
       decisionId,
       objective,
       selected: result.selected ? serializeCandidate(result.selected) : null,
-      scored: result.scored.map((s) => ({ provider: serializeCandidate(s.provider), score: s.score })),
-      rejected: result.rejected.map((r) => ({ provider: serializeCandidate(r.provider), reason: r.reason })),
+      scored: result.scored.map((s) => ({
+        provider: serializeCandidate(s.provider),
+        score: s.score,
+      })),
+      rejected: result.rejected.map((r) => ({
+        provider: serializeCandidate(r.provider),
+        reason: r.reason,
+      })),
     });
   });
 }

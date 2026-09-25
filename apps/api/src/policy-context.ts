@@ -34,8 +34,13 @@ export interface BuildPolicyContextParams {
  * itself (packages/policy-engine) never touches a database and stays a
  * pure, independently-testable function of its inputs (task principle E).
  */
-export async function buildPolicyContext(pool: Pool, params: BuildPolicyContextParams): Promise<PolicyContext> {
-  const todayStart = new Date(Date.UTC(params.now.getUTCFullYear(), params.now.getUTCMonth(), params.now.getUTCDate()));
+export async function buildPolicyContext(
+  pool: Pool,
+  params: BuildPolicyContextParams,
+): Promise<PolicyContext> {
+  const todayStart = new Date(
+    Date.UTC(params.now.getUTCFullYear(), params.now.getUTCMonth(), params.now.getUTCDate()),
+  );
 
   const { rows: agentRows } = await pool.query<{ total: string | null }>(
     `SELECT COALESCE(SUM(amount_minor), 0)::text AS total
@@ -83,7 +88,11 @@ export async function buildPolicyContext(pool: Pool, params: BuildPolicyContextP
   return {
     agentId: params.agentId,
     sessionBudgetId: params.sessionBudgetId,
-    provider: { id: params.providerId, category: params.providerCategory, trustStatus: params.providerTrustStatus },
+    provider: {
+      id: params.providerId,
+      category: params.providerCategory,
+      trustStatus: params.providerTrustStatus,
+    },
     amountMinor: params.amountMinor,
     requestFingerprint: params.requestFingerprint,
     now: params.now,

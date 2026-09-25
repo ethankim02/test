@@ -19,7 +19,10 @@ export interface InsertLedgerEntryParams {
   reservationId?: string | undefined;
 }
 
-export async function insertLedgerEntry(client: PoolClient, params: InsertLedgerEntryParams): Promise<void> {
+export async function insertLedgerEntry(
+  client: PoolClient,
+  params: InsertLedgerEntryParams,
+): Promise<void> {
   await client.query(
     `INSERT INTO ledger_entries
        (ledger_transaction_id, budget_id, entry_type, amount_minor, balance_after_minor, reservation_id)

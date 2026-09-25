@@ -64,8 +64,18 @@ export async function runReconciliation(
   for (const { id } of uncertain) {
     const result = await oracle.lookup(id);
     if (result === 'UNKNOWN') {
-      await recordReconciliation(pool, id, 'RECONCILIATION_REQUIRED', 'MARKED_FOR_REVIEW', 'settlement oracle could not determine outcome');
-      outcomes.push({ paymentIntentId: id, resolution: 'MARKED_FOR_REVIEW', detail: 'settlement oracle could not determine outcome' });
+      await recordReconciliation(
+        pool,
+        id,
+        'RECONCILIATION_REQUIRED',
+        'MARKED_FOR_REVIEW',
+        'settlement oracle could not determine outcome',
+      );
+      outcomes.push({
+        paymentIntentId: id,
+        resolution: 'MARKED_FOR_REVIEW',
+        detail: 'settlement oracle could not determine outcome',
+      });
       continue;
     }
     // Each step below is its own transaction (transitionPaymentIntent and
@@ -75,9 +85,14 @@ export async function runReconciliation(
     // connections, and serializing them into separate short transactions
     // avoids holding the intent row locked while a second connection does
     // unrelated work.
-    const intent = await transitionPaymentIntent(pool, id, result === 'SETTLED' ? 'SETTLED' : 'FAILED', {
-      reason: `reconciliation: oracle reported ${result}`,
-    });
+    const intent = await transitionPaymentIntent(
+      pool,
+      id,
+      result === 'SETTLED' ? 'SETTLED' : 'FAILED',
+      {
+        reason: `reconciliation: oracle reported ${result}`,
+      },
+    );
     if (intent.reservationId) {
       if (result === 'SETTLED') {
         await captureReservation(pool, intent.reservationId, clock);
@@ -89,8 +104,18 @@ export async function runReconciliation(
       }
     }
     const resolution = result === 'SETTLED' ? 'CONFIRMED_SETTLED' : 'CONFIRMED_FAILED';
-    await recordReconciliation(pool, id, 'RECONCILIATION_REQUIRED', resolution, `settlement oracle reported ${result}`);
-    outcomes.push({ paymentIntentId: id, resolution, detail: `settlement oracle reported ${result}` });
+    await recordReconciliation(
+      pool,
+      id,
+      'RECONCILIATION_REQUIRED',
+      resolution,
+      `settlement oracle reported ${result}`,
+    );
+    outcomes.push({
+      paymentIntentId: id,
+      resolution,
+      detail: `settlement oracle reported ${result}`,
+    });
   }
 
   // Pattern 2: decided FAILED but the reservation was never confirmed released

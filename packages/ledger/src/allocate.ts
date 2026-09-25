@@ -2,7 +2,13 @@ import { DomainError } from '@x402-treasury/shared';
 import type { Pool } from 'pg';
 import { insertLedgerEntry } from './ledger-entries.js';
 import { withTransaction } from './tx.js';
-import { mapBudgetRow, type BudgetPeriod, type BudgetRow, type BudgetScope, type RawBudgetRow } from './types.js';
+import {
+  mapBudgetRow,
+  type BudgetPeriod,
+  type BudgetRow,
+  type BudgetScope,
+  type RawBudgetRow,
+} from './types.js';
 
 export interface AllocateBudgetParams {
   orgId: string;
@@ -31,7 +37,9 @@ export async function allocateBudget(pool: Pool, params: AllocateBudgetParams): 
   }
   return withTransaction(pool, async (client) => {
     if (params.parentBudgetId) {
-      const { rows } = await client.query('SELECT id FROM budgets WHERE id = $1', [params.parentBudgetId]);
+      const { rows } = await client.query('SELECT id FROM budgets WHERE id = $1', [
+        params.parentBudgetId,
+      ]);
       if (rows.length === 0) {
         throw new DomainError('NOT_FOUND', `parent budget ${params.parentBudgetId} not found`);
       }

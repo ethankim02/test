@@ -13,7 +13,9 @@ export function defaultRequestFingerprint(sessionBudgetId: string, providerId: s
 }
 
 export function canonicalRequestHash(body: unknown): string {
-  return createHash('sha256').update(JSON.stringify(canonicalize(body)), 'utf8').digest('hex');
+  return createHash('sha256')
+    .update(JSON.stringify(canonicalize(body)), 'utf8')
+    .digest('hex');
 }
 
 /** Deterministic key ordering so `{a:1,b:2}` and `{b:2,a:1}` hash identically. */

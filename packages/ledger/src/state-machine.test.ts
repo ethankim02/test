@@ -30,7 +30,13 @@ describe('payment intent state machine', () => {
   });
 
   it('allows failure from every non-terminal in-flight state', () => {
-    const canFail: PaymentIntentState[] = ['APPROVED', 'RESERVED', 'PAYMENT_PREPARED', 'VERIFYING', 'SETTLING'];
+    const canFail: PaymentIntentState[] = [
+      'APPROVED',
+      'RESERVED',
+      'PAYMENT_PREPARED',
+      'VERIFYING',
+      'SETTLING',
+    ];
     for (const state of canFail) {
       expect(isLegalTransition(state, 'FAILED')).toBe(true);
     }

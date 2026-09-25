@@ -37,7 +37,10 @@ export const agents = pgTable(
     status: text('status').notNull().default('ACTIVE'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('idx_agents_org_id').on(t.orgId), index('idx_agents_parent_agent_id').on(t.parentAgentId)],
+  (t) => [
+    index('idx_agents_org_id').on(t.orgId),
+    index('idx_agents_parent_agent_id').on(t.parentAgentId),
+  ],
 );
 
 export const apiKeys = pgTable(
@@ -146,7 +149,10 @@ export const providers = pgTable(
     payTo: text('pay_to'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('idx_providers_org_id').on(t.orgId), index('idx_providers_category').on(t.category)],
+  (t) => [
+    index('idx_providers_org_id').on(t.orgId),
+    index('idx_providers_category').on(t.category),
+  ],
 );
 
 export const providerMetrics = pgTable(

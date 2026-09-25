@@ -58,5 +58,9 @@ export interface PaymentRail {
     payer: PayerContext,
   ): Promise<SignedPayment>;
   verifyPayment(signed: SignedPayment, requirements: PaymentRequirements): Promise<VerifyResult>;
-  settlePayment(signed: SignedPayment, requirements: PaymentRequirements, resource: ResourceRef): Promise<SettleResult>;
+  settlePayment(
+    signed: SignedPayment,
+    requirements: PaymentRequirements,
+    resource: ResourceRef,
+  ): Promise<SettleResult>;
 }

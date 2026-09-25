@@ -51,7 +51,7 @@ influence the outcome).
 
 `failureRate` is deliberately **not** min-max normalized like price and
 latency: price is in arbitrary currency units and latency in arbitrary
-milliseconds, so only their *relative* position among today's candidates
+milliseconds, so only their _relative_ position among today's candidates
 is meaningful — but success rate is already a probability on a fixed
 `[0, 1]` scale, and normalizing it would make "the least reliable
 candidate in this batch" look artificially bad even if all candidates are
@@ -73,11 +73,11 @@ summing to 1 keeps scores in a human-legible 0–1 range for logging.
 
 ### Worked example (also the router's own test fixture)
 
-| Provider | Price | Latency | Success rate |
-|---|---|---|---|
-| A | $0.010 | 1800ms | 99.9% |
-| B | $0.040 | 300ms | 99.5% |
-| C | $0.020 | 700ms | 98.1% |
+| Provider | Price  | Latency | Success rate |
+| -------- | ------ | ------- | ------------ |
+| A        | $0.010 | 1800ms  | 99.9%        |
+| B        | $0.040 | 300ms   | 99.5%        |
+| C        | $0.020 | 700ms   | 98.1%        |
 
 - `cheapest` → **A** (lowest price)
 - `fastest` → **B** (lowest latency)
@@ -96,7 +96,7 @@ the fact, not just at decision time.
 
 ## Not implemented: multi-resource constrained optimization
 
-Task §18 describes an optional advanced mode: choosing a *set* of
+Task §18 describes an optional advanced mode: choosing a _set_ of
 providers across N resource requests to minimize total cost subject to a
 deadline and reliability floor — a small linear/integer program. This
 project's routing need (pick one provider per single resource request) is

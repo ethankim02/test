@@ -1,4 +1,10 @@
-import type { ProviderCandidate, RejectedCandidate, RoutingConstraints, RoutingResult, RoutingWeights } from './types.js';
+import type {
+  ProviderCandidate,
+  RejectedCandidate,
+  RoutingConstraints,
+  RoutingResult,
+  RoutingWeights,
+} from './types.js';
 
 /**
  * Default weights for the `balanced` objective. Not hidden inside the
@@ -23,7 +29,10 @@ function filterFeasible(
   const rejected: RejectedCandidate[] = [];
 
   for (const candidate of candidates) {
-    if (constraints.maxPriceMinor !== undefined && candidate.priceMinor > constraints.maxPriceMinor) {
+    if (
+      constraints.maxPriceMinor !== undefined &&
+      candidate.priceMinor > constraints.maxPriceMinor
+    ) {
       rejected.push({
         provider: candidate,
         reason: `price ${candidate.priceMinor} exceeds maxPriceMinor ${constraints.maxPriceMinor}`,
@@ -37,7 +46,10 @@ function filterFeasible(
       });
       continue;
     }
-    if (constraints.minSuccessRate !== undefined && candidate.successRate < constraints.minSuccessRate) {
+    if (
+      constraints.minSuccessRate !== undefined &&
+      candidate.successRate < constraints.minSuccessRate
+    ) {
       rejected.push({
         provider: candidate,
         reason: `success rate ${candidate.successRate} is below minSuccessRate ${constraints.minSuccessRate}`,
@@ -90,7 +102,11 @@ function scoreCandidate(
     case 'most_reliable':
       return failureRate;
     case 'balanced':
-      return weights.price * normPrice + weights.latency * normLatency + weights.reliability * failureRate;
+      return (
+        weights.price * normPrice +
+        weights.latency * normLatency +
+        weights.reliability * failureRate
+      );
   }
 }
 
@@ -100,12 +116,18 @@ function scoreCandidate(
  * in the result so the decision is fully auditable (see
  * docs/ARCHITECTURE.md ERD `routing_decisions`).
  */
-export function route(candidates: ProviderCandidate[], constraints: RoutingConstraints): RoutingResult {
+export function route(
+  candidates: ProviderCandidate[],
+  constraints: RoutingConstraints,
+): RoutingResult {
   const { feasible, rejected } = filterFeasible(candidates, constraints);
   const weights = constraints.weights ?? DEFAULT_BALANCED_WEIGHTS;
 
   const scored = feasible
-    .map((provider) => ({ provider, score: scoreCandidate(provider, feasible, constraints.objective, weights) }))
+    .map((provider) => ({
+      provider,
+      score: scoreCandidate(provider, feasible, constraints.objective, weights),
+    }))
     .sort((a, b) => a.score - b.score);
 
   return {

@@ -11,6 +11,7 @@ Express, Hono, Next, fetch, axios) as of this research pass.
 **Decision.** Node.js 22 LTS + TypeScript, strict mode.
 
 **Alternatives considered.**
+
 - Go: has an x402 implementation too, and would be a reasonable choice for
   a payments backend, but the SDK surface (facilitator client,
   framework middleware) is less complete than TypeScript's as verified.
@@ -31,6 +32,7 @@ append-only ledger with a DB-enforced invariant).
 queries/the query builder — never raw string interpolation.
 
 **Alternatives considered.**
+
 - SQLite: fine for the demo apps' own local state, wrong choice for a
   system whose entire value proposition is "correct under concurrent
   writers" — SQLite serializes all writers at the file level, which would
@@ -64,6 +66,7 @@ Formatting to a human string (`"$0.030"`) happens only at the
 presentation edge (API JSON responses, CLI output).
 
 **Alternatives considered.**
+
 - `Decimal`/arbitrary-precision library (e.g. `decimal.js`): unnecessary —
   once you're in integer atomic units, plain integer arithmetic is exact
   and `bigint` is native to the language and to Postgres's `bigint` column
@@ -73,19 +76,21 @@ presentation edge (API JSON responses, CLI output).
   (§8, §43) and was never seriously considered.
 
 ## ADR-004: Ledger model — append-only journal + per-budget balance
+
 counters + balanced multi-entry transactions (not classic double-entry)
 
 See `ARCHITECTURE.md` §4 for the full reasoning. Summary:
 
 **Decision.** Two structures, updated together in one DB transaction per
 financial event:
+
 1. `ledger_entries` — append-only (DB-level `UPDATE`/`DELETE` revoked for
    the app role), one or more rows per event, grouped by
    `ledger_transaction_id`.
 2. `budgets.{available,reserved,spent}_minor` — materialized counters with
    a `CHECK (available_minor + reserved_minor + spent_minor =
-   allocated_minor AND available_minor >= 0 AND reserved_minor >= 0 AND
-   spent_minor >= 0)` constraint.
+allocated_minor AND available_minor >= 0 AND reserved_minor >= 0 AND
+spent_minor >= 0)` constraint.
 
 A reservation/settlement/release produces **one ledger entry per budget on
 the ancestor path** (task, agent, org), not a single entry, because the
@@ -93,12 +98,13 @@ invariant that must hold is "capacity is consumed at every level
 simultaneously," not "value moves between exactly two accounts."
 
 **Alternatives considered.**
+
 - **Classic double-entry with abstract GL accounts** (e.g. a
   `Treasury:Liabilities:AgentX` account credited and an
   `Expenses:ProviderY` account debited): a faithful double-entry ledger
   models value moving between two parties. That's a good fit for
-  *settlement* (money leaves the org and goes to a provider) but a poor
-  fit for *budget allocation*, where nothing actually moves when a parent
+  _settlement_ (money leaves the org and goes to a provider) but a poor
+  fit for _budget allocation_, where nothing actually moves when a parent
   grants a child a ceiling — the parent doesn't lose spendable capacity
   the moment it allocates, only when something is actually spent, and then
   it loses capacity at every level at once, not just its own. Modeling
@@ -120,6 +126,7 @@ simultaneously," not "value moves between exactly two accounts."
   anyway, getting both properties).
 
 ## ADR-005: Concurrency strategy — pessimistic row locking (`SELECT ...
+
 FOR UPDATE`), fixed lock order, `READ COMMITTED`
 
 **Decision.** See `ARCHITECTURE.md` §4.4. Lock every budget on the
@@ -127,6 +134,7 @@ ancestor path, root-to-leaf by ascending id, inside one transaction, at
 `READ COMMITTED` isolation.
 
 **Alternatives considered.**
+
 - **Optimistic concurrency control** (version column, retry on conflict):
   poor fit for a scenario designed around high contention on a single
   resource (10 agents racing for the last $1) — most participants would
@@ -147,6 +155,7 @@ ancestor path, root-to-leaf by ascending id, inside one transaction, at
   transaction that needs to be atomic anyway.
 
 ## ADR-006: Idempotency strategy — persisted key + request hash, DB unique
+
 constraint as the atomic claim
 
 **Decision.** `idempotency_keys (agent_id, key)` is `UNIQUE`. Claiming a
@@ -161,10 +170,11 @@ the resulting `payment_intent_id` so a retry after full completion returns
 the same intent's current state instead of re-running any logic.
 
 **Alternatives considered.**
+
 - **Hash-only, no persisted key row** (recompute idempotency purely from
   request content): can't distinguish "same logical request, expected to
   be a retry" from "coincidentally identical request, should be a new
-  charge" — the whole point of a client-supplied key is that the *caller*
+  charge" — the whole point of a client-supplied key is that the _caller_
   asserts retry intent, not that Treasury infers it from payload
   similarity.
 - **Advisory lock instead of unique constraint**: unique constraint +
@@ -173,6 +183,7 @@ the same intent's current state instead of re-running any logic.
   row to look up later for debugging/audit).
 
 ## ADR-007: x402 adapter design — `PaymentRail` interface, protocol
+
 objects never leak past the adapter boundary
 
 **Decision.** `packages/x402-adapter` exposes one interface:
@@ -197,6 +208,7 @@ versions (no `^`/`~`) inside `packages/x402-adapter` and `apps/demo-provider-*`
 only, per the version-skew note in `RESEARCH.md` §9.
 
 **Alternatives considered.**
+
 - **Depend on `@x402/*` types throughout the domain layer**: rejected —
   couples core financial logic (which needs to be independently unit
   testable, per the task's explicit principle E) to a third-party SDK's
@@ -208,6 +220,7 @@ only, per the version-skew note in `RESEARCH.md` §9.
   (§20).
 
 ## ADR-008: Routing algorithm — deterministic weighted scoring over
+
 normalized, filtered candidates (no ML)
 
 **Decision.** See `docs/ROUTING.md` for the full formula. Summary: filter
@@ -219,6 +232,7 @@ persist every candidate considered plus why it was rejected or its score,
 to `routing_decisions`.
 
 **Alternatives considered.**
+
 - **A learned ranking model**: rejected per the task's explicit anti-goal
   — there is no historical labeled routing-outcome dataset this project
   has access to, and a deterministic formula is more auditable for a

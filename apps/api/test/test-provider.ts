@@ -18,13 +18,21 @@ import {
  * test fixture). Structurally identical to
  * packages/x402-adapter/src/mock-adapter.test.ts's fixture.
  */
-export function startTestProvider(requirements: PaymentRequirementsWire): { server: Server; url: string; baseUrl: string; resourcePath: string } {
+export function startTestProvider(requirements: PaymentRequirementsWire): {
+  server: Server;
+  url: string;
+  baseUrl: string;
+  resourcePath: string;
+} {
   const resourcePath = '/research';
   const server = createServer((req, res) => {
     const sigHeader = req.headers[PAYMENT_SIGNATURE_HEADER.toLowerCase()];
     if (!sigHeader || Array.isArray(sigHeader)) {
       const required: PaymentRequiredWire = { x402Version: 2, accepts: [requirements] };
-      res.writeHead(402, { [PAYMENT_REQUIRED_HEADER]: encodeHeader(required), 'content-type': 'application/json' });
+      res.writeHead(402, {
+        [PAYMENT_REQUIRED_HEADER]: encodeHeader(required),
+        'content-type': 'application/json',
+      });
       res.end(JSON.stringify({ error: 'payment required' }));
       return;
     }
@@ -35,12 +43,16 @@ export function startTestProvider(requirements: PaymentRequirementsWire): { serv
       res.end(JSON.stringify({ error: settlement.errorReason }));
       return;
     }
-    res.writeHead(200, { 'content-type': 'application/json', 'x-mock-settlement-tx': settlement.transaction! });
+    res.writeHead(200, {
+      'content-type': 'application/json',
+      'x-mock-settlement-tx': settlement.transaction!,
+    });
     res.end(JSON.stringify({ result: 'mock research data' }));
   });
   server.listen(0);
   const address = server.address();
-  if (typeof address !== 'object' || address === null) throw new Error('failed to bind test provider');
+  if (typeof address !== 'object' || address === null)
+    throw new Error('failed to bind test provider');
   const baseUrl = `http://127.0.0.1:${address.port}`;
   return { server, url: `${baseUrl}${resourcePath}`, baseUrl, resourcePath };
 }

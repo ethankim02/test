@@ -19,7 +19,12 @@ export interface ManagedProcess {
  * — the Treasury API and both demo providers are real separate processes,
  * not in-process function calls.
  */
-export async function startProcess(name: string, entrypoint: string, port: number, env: Record<string, string>): Promise<ManagedProcess> {
+export async function startProcess(
+  name: string,
+  entrypoint: string,
+  port: number,
+  env: Record<string, string>,
+): Promise<ManagedProcess> {
   const child = spawn('node', ['--import', 'tsx', join(REPO_ROOT, entrypoint)], {
     cwd: REPO_ROOT,
     env: { ...process.env, ...env },
@@ -39,7 +44,9 @@ export async function startProcess(name: string, entrypoint: string, port: numbe
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
   child.kill();
-  throw new Error(`${name} did not become healthy at ${healthUrl} within 20s: ${String(lastError)}`);
+  throw new Error(
+    `${name} did not become healthy at ${healthUrl} within 20s: ${String(lastError)}`,
+  );
 }
 
 export function stopAll(processes: ManagedProcess[]): void {

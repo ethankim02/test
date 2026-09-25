@@ -2,7 +2,14 @@ import { ExactEvmScheme } from '@x402/evm';
 import { x402Client } from '@x402/core/client';
 import { wrapFetchWithPayment } from '@x402/fetch';
 import { privateKeyToAccount } from 'viem/accounts';
-import type { PaymentRail, PaymentRequirements, ResourceRef, SettleResult, SignedPayment, VerifyResult } from './types.js';
+import type {
+  PaymentRail,
+  PaymentRequirements,
+  ResourceRef,
+  SettleResult,
+  SignedPayment,
+  VerifyResult,
+} from './types.js';
 
 /**
  * REAL adapter — Base Sepolia only, never used in CI. Verified against the
@@ -61,12 +68,19 @@ export class RealX402Adapter implements PaymentRail {
     return { isValid: true }; // verification happens facilitator-side during settlePayment
   }
 
-  async settlePayment(_signed: SignedPayment, requirements: PaymentRequirements, resource: ResourceRef): Promise<SettleResult> {
+  async settlePayment(
+    _signed: SignedPayment,
+    requirements: PaymentRequirements,
+    resource: ResourceRef,
+  ): Promise<SettleResult> {
     const payFetch = wrapFetchWithPayment(fetch, this.client);
     try {
       const response = await payFetch(resource.url);
       if (!response.ok) {
-        return { outcome: 'FAILED', errorReason: `HTTP ${response.status} from ${resource.url} after payment` };
+        return {
+          outcome: 'FAILED',
+          errorReason: `HTTP ${response.status} from ${resource.url} after payment`,
+        };
       }
       const resourceBody: unknown = await response.json().catch(() => undefined);
       // @x402/core/http exposes decodePaymentResponseHeader to read the

@@ -16,7 +16,11 @@ const CreatePaymentIntentSchema = z.object({
   simulateUncertainSettlement: z.boolean().optional(),
 });
 
-export function registerPaymentRoutes(app: FastifyInstance, pool: Pool, adapter: PaymentRail): void {
+export function registerPaymentRoutes(
+  app: FastifyInstance,
+  pool: Pool,
+  adapter: PaymentRail,
+): void {
   app.post('/payments/intents', async (request, reply) => {
     const auth = await authenticate(pool, request);
     const body = CreatePaymentIntentSchema.parse(request.body);
@@ -24,7 +28,10 @@ export function registerPaymentRoutes(app: FastifyInstance, pool: Pool, adapter:
 
     const idempotencyKey = request.headers['idempotency-key'];
     if (!idempotencyKey || Array.isArray(idempotencyKey)) {
-      throw new DomainError('VALIDATION_ERROR', 'the Idempotency-Key header is required for POST /payments/intents');
+      throw new DomainError(
+        'VALIDATION_ERROR',
+        'the Idempotency-Key header is required for POST /payments/intents',
+      );
     }
 
     // Provider lookup happens inside executePayment, AFTER the idempotency

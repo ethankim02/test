@@ -1,6 +1,10 @@
 import type { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { createPaymentIntent, getPaymentIntent, transitionPaymentIntent } from '../src/payment-intents.js';
+import {
+  createPaymentIntent,
+  getPaymentIntent,
+  transitionPaymentIntent,
+} from '../src/payment-intents.js';
 import { runReconciliation, type SettlementOracle } from '../src/reconciliation.js';
 import { getBudget, getReservation } from '../src/read.js';
 import { reserveBudget } from '../src/reserve.js';
@@ -35,7 +39,9 @@ async function setUpIntent(pool: Pool) {
   });
   await transitionPaymentIntent(pool, intent.id, 'POLICY_EVALUATING');
   await transitionPaymentIntent(pool, intent.id, 'APPROVED');
-  await transitionPaymentIntent(pool, intent.id, 'RESERVED', { patch: { reservationId: reservation.id } });
+  await transitionPaymentIntent(pool, intent.id, 'RESERVED', {
+    patch: { reservationId: reservation.id },
+  });
   await transitionPaymentIntent(pool, intent.id, 'PAYMENT_PREPARED');
   await transitionPaymentIntent(pool, intent.id, 'VERIFYING');
   await transitionPaymentIntent(pool, intent.id, 'SETTLING');
@@ -65,7 +71,10 @@ describe('reconciliation', () => {
     const outcomes = await runReconciliation(pool, oracle);
 
     expect(outcomes).toHaveLength(1);
-    expect(outcomes[0]).toMatchObject({ paymentIntentId: intent.id, resolution: 'CONFIRMED_SETTLED' });
+    expect(outcomes[0]).toMatchObject({
+      paymentIntentId: intent.id,
+      resolution: 'CONFIRMED_SETTLED',
+    });
     expect((await getPaymentIntent(pool, intent.id)).state).toBe('SETTLED');
   });
 
@@ -76,7 +85,10 @@ describe('reconciliation', () => {
     const oracle: SettlementOracle = { lookup: async () => 'FAILED' };
     const outcomes = await runReconciliation(pool, oracle);
 
-    expect(outcomes[0]).toMatchObject({ paymentIntentId: intent.id, resolution: 'CONFIRMED_FAILED' });
+    expect(outcomes[0]).toMatchObject({
+      paymentIntentId: intent.id,
+      resolution: 'CONFIRMED_FAILED',
+    });
     expect((await getPaymentIntent(pool, intent.id)).state).toBe('RESERVATION_RELEASED');
     expect((await getReservation(pool, reservation.id)).status).toBe('RELEASED');
 
@@ -101,7 +113,9 @@ describe('reconciliation', () => {
     const { intent, reservation, sessionBudget } = await setUpIntent(pool);
     // Simulate a crash: the intent was marked FAILED but the process died
     // before releaseReservation ran.
-    await transitionPaymentIntent(pool, intent.id, 'FAILED', { reason: 'simulated crash before release' });
+    await transitionPaymentIntent(pool, intent.id, 'FAILED', {
+      reason: 'simulated crash before release',
+    });
 
     const oracle: SettlementOracle = { lookup: async () => 'UNKNOWN' }; // irrelevant to this pattern
     const outcomes = await runReconciliation(pool, oracle);
@@ -120,10 +134,14 @@ describe('reconciliation', () => {
     await transitionPaymentIntent(pool, intent.id, 'RECONCILIATION_REQUIRED');
     await runReconciliation(pool, { lookup: async () => 'SETTLED' });
 
-    const { rows } = await pool.query('SELECT * FROM reconciliation_records WHERE payment_intent_id = $1', [
-      intent.id,
-    ]);
+    const { rows } = await pool.query(
+      'SELECT * FROM reconciliation_records WHERE payment_intent_id = $1',
+      [intent.id],
+    );
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ resolution: 'CONFIRMED_SETTLED', previous_state: 'RECONCILIATION_REQUIRED' });
+    expect(rows[0]).toMatchObject({
+      resolution: 'CONFIRMED_SETTLED',
+      previous_state: 'RECONCILIATION_REQUIRED',
+    });
   });
 });

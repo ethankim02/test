@@ -106,7 +106,10 @@ describe('POST /payments/intents', () => {
     const resp = await app.inject({
       method: 'POST',
       url: '/payments/intents',
-      headers: { authorization: `Bearer ${ctx.agentKey}`, 'idempotency-key': 'cross-agent-attempt' },
+      headers: {
+        authorization: `Bearer ${ctx.agentKey}`,
+        'idempotency-key': 'cross-agent-attempt',
+      },
       payload: { agentId: otherAgentId, sessionId: otherSessionId, providerId: ctx.providerId },
     });
 
@@ -156,7 +159,10 @@ describe('POST /payments/intents', () => {
     const resp = await app.inject({
       method: 'POST',
       url: '/payments/intents',
-      headers: { authorization: `Bearer ${ctx.apiKey}`, 'idempotency-key': 'first-request-not-a-duplicate' },
+      headers: {
+        authorization: `Bearer ${ctx.apiKey}`,
+        'idempotency-key': 'first-request-not-a-duplicate',
+      },
       payload: { agentId: ctx.agentId, sessionId: ctx.sessionId, providerId: ctx.providerId },
     });
 

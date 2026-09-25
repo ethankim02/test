@@ -6,7 +6,10 @@ import type { Pool, PoolClient } from 'pg';
  * (reserve/capture/release/expire) is one call to this — the atomicity of
  * "check invariant, then mutate" depends on it.
  */
-export async function withTransaction<T>(pool: Pool, fn: (client: PoolClient) => Promise<T>): Promise<T> {
+export async function withTransaction<T>(
+  pool: Pool,
+  fn: (client: PoolClient) => Promise<T>,
+): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

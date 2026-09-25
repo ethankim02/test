@@ -16,7 +16,10 @@ import type { PolicyContext, PolicyDecision, PolicyRuleConfig, RuleEvaluation } 
  * every other rule so a blocked caller gets `SESSION_BUDGET_EXCEEDED`
  * instead of just an opaque 402 from the ledger later.
  */
-export function evaluatePolicy(context: PolicyContext, configs: PolicyRuleConfig[]): PolicyDecision {
+export function evaluatePolicy(
+  context: PolicyContext,
+  configs: PolicyRuleConfig[],
+): PolicyDecision {
   const evaluatedRules: RuleEvaluation[] = [sessionBudgetLimit(context, undefined)];
 
   for (const config of configs) {

@@ -4,9 +4,30 @@ import type { ProviderCandidate } from './types.js';
 
 // The exact three-provider scenario from the project spec: same
 // capability, different price/latency/reliability characteristics.
-const providerA: ProviderCandidate = { id: 'A', name: 'Cheap & slow', category: 'search', priceMinor: 10_000n, latencyMs: 1800, successRate: 0.999 };
-const providerB: ProviderCandidate = { id: 'B', name: 'Expensive & fast', category: 'search', priceMinor: 40_000n, latencyMs: 300, successRate: 0.995 };
-const providerC: ProviderCandidate = { id: 'C', name: 'Balanced', category: 'search', priceMinor: 20_000n, latencyMs: 700, successRate: 0.981 };
+const providerA: ProviderCandidate = {
+  id: 'A',
+  name: 'Cheap & slow',
+  category: 'search',
+  priceMinor: 10_000n,
+  latencyMs: 1800,
+  successRate: 0.999,
+};
+const providerB: ProviderCandidate = {
+  id: 'B',
+  name: 'Expensive & fast',
+  category: 'search',
+  priceMinor: 40_000n,
+  latencyMs: 300,
+  successRate: 0.995,
+};
+const providerC: ProviderCandidate = {
+  id: 'C',
+  name: 'Balanced',
+  category: 'search',
+  priceMinor: 20_000n,
+  latencyMs: 700,
+  successRate: 0.981,
+};
 
 const candidates = [providerA, providerB, providerC];
 
