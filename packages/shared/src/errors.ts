@@ -81,7 +81,7 @@ export interface DomainErrorOptions {
 export class DomainError extends Error {
   readonly code: ReasonCode;
   readonly httpStatus: number;
-  readonly details?: Record<string, unknown>;
+  readonly details: Record<string, unknown> | undefined;
 
   constructor(code: ReasonCode, message: string, options: DomainErrorOptions = {}) {
     super(message);
@@ -91,7 +91,7 @@ export class DomainError extends Error {
     this.details = options.details;
   }
 
-  toJSON(): { code: ReasonCode; message: string; details?: Record<string, unknown> } {
+  toJSON(): { code: ReasonCode; message: string; details: Record<string, unknown> | undefined } {
     return { code: this.code, message: this.message, details: this.details };
   }
 }

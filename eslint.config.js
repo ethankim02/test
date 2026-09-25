@@ -17,4 +17,11 @@ export default tseslint.config(
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
+  {
+    // CLI entrypoints and demo apps: console output is the actual product, not debug noise.
+    files: ['**/migrate.ts', '**/seed.ts', '**/reconcile.ts', 'apps/**/src/**'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 );

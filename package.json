@@ -1,6 +1,7 @@
 {
   "name": "x402-treasury",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "description": "Programmable spending infrastructure for autonomous x402 agents.",
   "license": "MIT",
