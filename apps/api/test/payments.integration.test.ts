@@ -139,6 +139,31 @@ describe('POST /payments/intents', () => {
     expect(resp.statusCode).toBe(401);
   });
 
+  it('a DuplicatePaymentWindow policy does not mistake a fresh request for a duplicate of itself', async () => {
+    // Regression test: the payment intent row is created before policy
+    // evaluation runs, so the "recent payments" lookup used by
+    // DUPLICATE_PAYMENT_WINDOW must exclude the very row it's evaluating,
+    // or a brand-new agent's very first request is spuriously blocked as
+    // a "duplicate" of itself.
+    ctx = await bootstrap(app, pool, { sessionBudget: '1.00', priceMinor: '30000' });
+    await app.inject({
+      method: 'POST',
+      url: '/policies',
+      headers: { authorization: `Bearer ${ctx.apiKey}` },
+      payload: { scope: 'ORG', ruleType: 'DUPLICATE_PAYMENT_WINDOW', params: { windowSeconds: 5 } },
+    });
+
+    const resp = await app.inject({
+      method: 'POST',
+      url: '/payments/intents',
+      headers: { authorization: `Bearer ${ctx.apiKey}`, 'idempotency-key': 'first-request-not-a-duplicate' },
+      payload: { agentId: ctx.agentId, sessionId: ctx.sessionId, providerId: ctx.providerId },
+    });
+
+    expect(resp.statusCode).toBe(200);
+    expect(resp.json().decision).toBe('ALLOW');
+  });
+
   it('requires an Idempotency-Key header', async () => {
     ctx = await bootstrap(app, pool);
     const resp = await app.inject({

@@ -24,6 +24,8 @@ export interface BuildPolicyContextParams {
   now: Date;
   /** How far back to look for duplicate/velocity checks. */
   recentWindowSeconds: number;
+  /** The payment intent this context is being built for, so its own just-inserted row is never mistaken for a prior duplicate/velocity sample of itself. */
+  excludeIntentId: string;
 }
 
 /**
@@ -66,9 +68,9 @@ export async function buildPolicyContext(pool: Pool, params: BuildPolicyContextP
   }>(
     `SELECT provider_id, amount_minor, created_at, request_fingerprint
      FROM payment_intents
-     WHERE agent_id = $1 AND created_at >= $2
+     WHERE agent_id = $1 AND created_at >= $2 AND id != $3
      ORDER BY created_at DESC`,
-    [params.agentId, windowStart.toISOString()],
+    [params.agentId, windowStart.toISOString(), params.excludeIntentId],
   );
 
   const recentPayments: RecentPayment[] = recentRows.map((r) => ({

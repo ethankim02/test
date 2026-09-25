@@ -110,6 +110,7 @@ export async function executePayment(pool: Pool, adapter: PaymentRail, params: E
     requestFingerprint,
     now,
     recentWindowSeconds: RECENT_WINDOW_SECONDS,
+    excludeIntentId: intent.id,
   });
 
   const decision = evaluatePolicy(policyContext, policyConfigs);
@@ -200,6 +201,7 @@ export async function executePayment(pool: Pool, adapter: PaymentRail, params: E
       decision: 'ALLOW' as const,
       state: 'SETTLED',
       amountMinor: requirements.amountMinor.toString(),
+      evaluatedRules: decision.evaluatedRules,
       settlement: { transactionHash: settleResult.transactionHash, network: settleResult.network },
       resource: settleResult.resourceBody,
       sessionBudget: summary,

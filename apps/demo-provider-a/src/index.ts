@@ -43,6 +43,21 @@ const tiers: DemoTier[] = [
     network: NETWORK,
     respond: (q) => researchResponse('Provider C (balanced)', q),
   },
+  {
+    // Priced at $0.50 specifically to support the concurrency failure demo
+    // (apps/demo-agent), which needs a real, live-quoted price of exactly
+    // $0.50 to reproduce "budget $1.00, ten concurrent $0.50 requests, only
+    // two succeed" against the real HTTP API rather than only at the
+    // ledger unit-test level. Not used by the routing demo.
+    path: '/concurrency-test',
+    label: 'Provider A (concurrency test fixture)',
+    priceMinor: 500_000n, // $0.50
+    latencyMs: 50,
+    successRate: 1,
+    payTo: PAY_TO,
+    network: NETWORK,
+    respond: (q) => researchResponse('Provider A (concurrency test fixture)', q),
+  },
 ];
 
 const app = createDemoResourceServer(tiers);
