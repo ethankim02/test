@@ -122,7 +122,7 @@ export async function seed(connectionString: string): Promise<{ orgId: string; a
         orgId: org.id,
         name: 'Demo Research Provider C (balanced)',
         baseUrl: 'http://localhost:4001',
-        resourcePath: '/research?tier=balanced',
+        resourcePath: '/research-balanced',
         category: 'search',
         network: 'eip155:84532',
         configuredPriceMinor: 15_000n, // $0.015

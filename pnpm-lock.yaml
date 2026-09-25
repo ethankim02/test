@@ -79,6 +79,32 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.4)
 
+  apps/demo-provider-a:
+    dependencies:
+      '@x402-treasury/x402-adapter':
+        specifier: workspace:*
+        version: link:../../packages/x402-adapter
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  apps/demo-provider-b:
+    dependencies:
+      '@x402-treasury/x402-adapter':
+        specifier: workspace:*
+        version: link:../../packages/x402-adapter
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/db:
     dependencies:
       '@x402-treasury/shared':
@@ -173,6 +199,9 @@ importers:
       '@x402-treasury/shared':
         specifier: workspace:*
         version: link:../shared
+      fastify:
+        specifier: ^5.2.0
+        version: 5.12.5
     devDependencies:
       '@x402/core':
         specifier: 2.27.0

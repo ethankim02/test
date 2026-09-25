@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@x402-treasury/shared": "workspace:*"
+    "@x402-treasury/shared": "workspace:*",
+    "fastify": "^5.2.0"
   },
   "devDependencies": {
     "@x402/core": "2.27.0",
