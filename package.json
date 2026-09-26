@@ -1,0 +1,47 @@
+{
+  "name": "x402-treasury",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Programmable spending infrastructure for autonomous x402 agents.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ethankim02/x402-treasury.git"
+  },
+  "homepage": "https://github.com/ethankim02/x402-treasury#readme",
+  "bugs": {
+    "url": "https://github.com/ethankim02/x402-treasury/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "build": "pnpm -r --filter=./packages/* --filter=./apps/* run build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "vitest run --exclude '**/*.integration.test.ts'",
+    "test:integration": "vitest run --testTimeout=30000 -c vitest.integration.config.ts",
+    "test:all": "vitest run --testTimeout=30000",
+    "db:migrate": "pnpm --filter @x402-treasury/db run migrate",
+    "db:seed": "pnpm --filter @x402-treasury/db run seed",
+    "reconcile": "pnpm --filter @x402-treasury/api run reconcile",
+    "demo:research": "pnpm --filter @x402-treasury/demo-agent run demo:research",
+    "demo:failures": "pnpm --filter @x402-treasury/demo-agent run demo:failures",
+    "dev:api": "pnpm --filter @x402-treasury/api run dev"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^2.1.8"
+  }
+}

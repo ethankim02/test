@@ -103,7 +103,7 @@ before either writes) and throws away history. x402 Treasury instead keeps
 2. A `budgets` row per budget node holding three **materialized, always
    consistent** counters: `available_minor`, `reserved_minor`,
    `spent_minor`. These are not a cache that can drift — they are updated
-   in the *same transaction* as the journal insert that explains the
+   in the _same transaction_ as the journal insert that explains the
    change, so they are always exactly derivable by replaying that budget's
    journal. Reconciliation can and does recompute them from the journal
    as a correctness check (see §7).
@@ -124,7 +124,7 @@ fail to even commit.
 ### 4.3 Hierarchical consumption (the actual "double-entry" decision)
 
 The spec asked us to evaluate double-entry bookkeeping. Classic
-double-entry models a *transfer between two accounts* (debit one, credit
+double-entry models a _transfer between two accounts_ (debit one, credit
 another, net zero). That doesn't describe this domain: allocating a child
 budget doesn't move money out of the parent's spendable pool at allocation
 time (an org can allocate $20/day to five agents even though its own cap is
@@ -132,8 +132,8 @@ $100/day — that's a soft ceiling per node, same as a real credit-limit
 hierarchy, not a wallet transfer). The property that actually needs to hold
 is different and stronger: **a single dollar spent by a task must
 simultaneously consume capacity at every ancestor level**, so a leaf can
-never spend money its parents don't actually have room for *at the moment
-of spending*.
+never spend money its parents don't actually have room for _at the moment
+of spending_.
 
 So instead of two-entry double-entry, x402 Treasury uses **balanced
 multi-entry ledger transactions**: one reservation produces one
@@ -161,7 +161,7 @@ whole reservation aborts atomically.
   target scenario is deliberately high-contention (ten agents racing for
   the last $1 of budget). OCC would mean most of those ten retry at least
   once, and under enough contention some can starve; `FOR UPDATE` makes
-  losers fail *once*, immediately, with a clear reason — a treasury system
+  losers fail _once_, immediately, with a clear reason — a treasury system
   should say "no" fast and deterministically, not "try again."
 - **Why not `SERIALIZABLE`:** the invariant depends only on the rows we
   explicitly lock. `SERIALIZABLE` would add abort-and-retry overhead for
@@ -398,16 +398,16 @@ table, with the reasoning:
 
 - **Wallet** — Treasury never custodies a private key (ADR-007); the
   paying key lives only in the operator's environment for the real
-  adapter. There is no wallet *record* to store beyond a `payTo` address,
+  adapter. There is no wallet _record_ to store beyond a `payTo` address,
   which lives on `providers`/config, not a domain entity with its own
   lifecycle.
 - **Task / Spending Session** — modeled as a `BUDGETS` row with
-  `scope = 'SESSION'`, not a separate table, because a session *is*
+  `scope = 'SESSION'`, not a separate table, because a session _is_
   budget-shaped (allocated/available/reserved/spent, an expiry, a parent).
   Giving it its own table would mean duplicating the accounting columns
   and reconciling two representations of the same concept.
 - **Payment Attempt** — the `exact` scheme this project implements is
-  single-shot per signed payload; retries of the *same logical request*
+  single-shot per signed payload; retries of the _same logical request_
   are idempotency replays (return the existing intent), not new attempts.
   The full lifecycle of one attempt is the `payment_state_transitions`
   log on the one `PAYMENT_INTENTS` row.
@@ -447,7 +447,7 @@ this system:
   `CONFIRMED_FAILED`.
 - If it cannot determine the true outcome (e.g. real adapter, chain query
   itself fails), it does **not** guess — it records `resolution =
-  MARKED_FOR_REVIEW` and leaves the intent in `RECONCILIATION_REQUIRED`.
+MARKED_FOR_REVIEW` and leaves the intent in `RECONCILIATION_REQUIRED`.
 
 No reconciliation path silently mutates a record without a corresponding
 `RECONCILIATION_RECORDS` audit row — this is the project's "never silently
