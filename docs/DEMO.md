@@ -219,14 +219,14 @@ point.
 
 Once the readiness check reaches the facilitator successfully:
 
-| Variable                 | Type                           | Where to get it                                                                                                                             | Costs anything?   |
-| ------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| `X402_ADAPTER_MODE`      | string, literal `real`         | set it yourself                                                                                                                             | no                |
-| `X402_NETWORK`           | string, literal `eip155:84532` | already the default                                                                                                                         | no                |
-| `X402_FACILITATOR_URL`   | URL                            | `https://x402.org/facilitator` (public, verified testnet-only — confirm it's still up)                                                      | no                |
-| `X402_PAYER_PRIVATE_KEY` | `0x`-prefixed hex private key  | generate a **fresh, throwaway** key locally (`cast wallet new`, or any wallet's "create account") — never reuse a key that holds real funds | no                |
-| — funding that key       | testnet USDC                   | `https://faucet.circle.com` — dispenses testnet USDC on Base Sepolia                                                                        | no, it's a faucet |
-| `X402_PAYTO_ADDRESS`     | address                        | any valid address you control (or generate one)                                                                                             | no                |
+| Variable                 | Type                           | Where to get it                                                                                                                                                                                | Costs anything?   |
+| ------------------------ | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `X402_ADAPTER_MODE`      | string, literal `real`         | set it yourself                                                                                                                                                                                | no                |
+| `X402_NETWORK`           | string, literal `eip155:84532` | already the default                                                                                                                                                                            | no                |
+| `X402_FACILITATOR_URL`   | URL                            | `https://x402.org/facilitator` (public, verified testnet-only — confirm it's still up)                                                                                                         | no                |
+| `X402_PAYER_PRIVATE_KEY` | `0x`-prefixed hex private key  | `pnpm --filter @x402-treasury/x402-adapter run testnet:wallet` — generates a **fresh, throwaway** key and writes it straight to `.env`, printing only the public address, never the key itself | no                |
+| — funding that key       | testnet USDC                   | `https://faucet.circle.com` — dispenses testnet USDC on Base Sepolia                                                                                                                           | no, it's a faucet |
+| `X402_PAYTO_ADDRESS`     | address                        | any valid address you control (or generate one)                                                                                                                                                | no                |
 
 No testnet ETH is needed for the payer — the `exact`/EIP-3009 flow is
 gasless for the payer; the facilitator broadcasts and pays gas

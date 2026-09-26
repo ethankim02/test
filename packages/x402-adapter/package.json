@@ -10,7 +10,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "testnet:check": "tsx scripts/testnet-readiness-check.ts"
+    "testnet:check": "tsx scripts/testnet-readiness-check.ts",
+    "testnet:wallet": "tsx scripts/generate-testnet-wallet.ts"
   },
   "dependencies": {
     "@x402-treasury/shared": "workspace:*",
