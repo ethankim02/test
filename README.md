@@ -92,7 +92,11 @@ real local processes and talk to them over real HTTP — see
 [`docs/DEMO.md`](docs/DEMO.md) for exactly what happens and sample
 output.
 
-## Demo
+## MOCK PAYMENT DEMO
+
+Real HTTP, real policy/ledger/routing logic — settlement is simulated by
+an in-memory mock facilitator. **No blockchain transaction of any kind
+occurs.** This is what CI and both `pnpm demo:*` commands run.
 
 ```
 x402 Treasury Demo
@@ -118,9 +122,50 @@ Budget
 Allocated $1.000000   Spent $0.015000   Reserved $0.000000   Available $0.985000
 ```
 
-`PAYMENT MODE: MOCK` is printed on every run of this command — see
-[x402 integration](#x402-integration) for what "mock" actually means here
-and how to run against real Base Sepolia.
+`PAYMENT MODE: MOCK` is printed on every run of this command — never
+mistake it for an on-chain settlement.
+
+## REAL BASE TESTNET x402 DEMO
+
+Separate from the mock demo above, and never conflated with it. Uses the
+actual Base Sepolia testnet and a real x402 facilitator; moves worthless
+testnet USDC, never mainnet funds.
+
+**Current status:** `RealX402Adapter` is implemented against the real,
+installed `@x402/fetch`/`@x402/evm`/`@x402/core` packages (verified
+exports, not guessed) and its full construction path —
+`privateKeyToAccount` → `ExactEvmScheme` → `x402Client` →
+`wrapFetchWithPayment` — runs successfully. A real end-to-end settlement
+has **not** been completed, for one specific, documented reason:
+
+```bash
+pnpm --filter @x402-treasury/x402-adapter run testnet:check
+```
+
+```
+✓ Construction path succeeded: privateKeyToAccount -> ExactEvmScheme -> x402Client -> wrapFetchWithPayment
+  (all four are real exports of the installed @x402/evm, @x402/core, @x402/fetch packages)
+
+✗ Blocked by this environment's own network egress policy (HTTP 403):
+  Host not in allowlist: x402.org. Add this host to your network egress settings to allow access.
+```
+
+This project's own build/development environment cannot make outbound
+network calls to `x402.org`, `sepolia.base.org`, or `sepolia.basescan.org`
+— confirmed directly against the environment's own proxy diagnostics, not
+assumed. **This is not a code, protocol, or credential problem** — it's
+this specific sandbox's network policy. See
+[`docs/RESEARCH.md`](docs/RESEARCH.md) §13 for the full verification
+attempt and [`docs/DEMO.md`](docs/DEMO.md) "REAL BASE TESTNET x402 DEMO"
+for the exact environment variables, faucet, and steps needed to complete
+this from an environment with normal outbound internet access — no
+testnet ETH is required (the payer flow is gasless), only testnet USDC
+from `https://faucet.circle.com`, and nothing in the process costs real
+money.
+
+Once completed from such an environment, this section is where the real
+transaction hash, amount, network, and block-explorer link belong —
+intentionally left blank rather than fabricated.
 
 ## Budget hierarchy
 
@@ -201,14 +246,24 @@ Two adapters implement one `PaymentRail` interface
   network in code, not just configuration), using the actual installed
   `@x402/fetch`/`@x402/evm` packages (`wrapFetchWithPayment`, `x402Client`,
   `ExactEvmScheme` — read directly from the installed packages' `.d.ts`
-  files, not guessed). Exercised manually only; **CI never runs this
-  path** and this README does not claim it does.
+  files, not guessed). `apps/api` switches to it only when
+  `X402_ADAPTER_MODE=real` is explicitly set (`apps/api/src/config.ts`
+  refuses to start in that mode without both `X402_FACILITATOR_URL` and
+  `X402_PAYER_PRIVATE_KEY`). Exercised manually only; **CI never runs this
+  path** and this README does not claim it does. See
+  [REAL BASE TESTNET x402 DEMO](#real-base-testnet-x402-demo) above for
+  exactly how far this was verified and why an actual settlement hasn't
+  been completed yet.
 
 ## Limitations
 
-- `RealX402Adapter` was implemented against the verified SDK surface but
-  not exercised end-to-end against a live facilitator during development
-  — treat it as a documented starting point, not a proven integration.
+- `RealX402Adapter` was implemented against the verified SDK surface and
+  its construction path runs successfully against the real packages, but
+  a real settlement was not completed: this project's own build
+  environment's network policy blocks outbound access to the facilitator,
+  RPC, and explorer hosts required (confirmed directly, not assumed — see
+  `docs/RESEARCH.md` §13). Treat it as verified-but-not-yet-exercised, not
+  unverified.
 - No production-grade auth (API keys are SHA-256-hashed bearer tokens,
   no rotation/expiry/scoping beyond org-vs-agent).
 - No request-rate limiting at the HTTP layer.

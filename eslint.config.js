@@ -19,7 +19,7 @@ export default tseslint.config(
   },
   {
     // CLI entrypoints and demo apps: console output is the actual product, not debug noise.
-    files: ['**/migrate.ts', '**/seed.ts', '**/reconcile.ts', 'apps/**/src/**'],
+    files: ['**/migrate.ts', '**/seed.ts', '**/reconcile.ts', 'apps/**/src/**', '**/scripts/**'],
     rules: {
       'no-console': 'off',
     },

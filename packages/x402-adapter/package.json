@@ -9,7 +9,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "testnet:check": "tsx scripts/testnet-readiness-check.ts"
   },
   "dependencies": {
     "@x402-treasury/shared": "workspace:*",
@@ -19,6 +20,7 @@
     "@x402/core": "2.27.0",
     "@x402/evm": "2.27.0",
     "@x402/fetch": "2.27.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "viem": "^2.21.0",
     "vitest": "^2.1.8"

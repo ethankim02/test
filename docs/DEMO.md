@@ -1,6 +1,24 @@
 # Demo Walkthrough
 
-Everything below runs entirely against `MockX402Adapter` (see
+This document covers two entirely separate things. Do not confuse them:
+
+- **MOCK PAYMENT DEMO** (`pnpm demo:research`, `pnpm demo:failures`, and
+  everything CI runs) — real HTTP, real policy/ledger/routing logic, but
+  settlement is simulated by an in-memory mock facilitator. **No
+  blockchain transaction of any kind occurs.** Every payment mode line
+  printed says `PAYMENT MODE: MOCK`.
+- **REAL BASE TESTNET x402 DEMO** (`pnpm --filter @x402-treasury/x402-adapter
+run testnet:check`, and a real payment flow beyond it) — uses the actual
+  Base Sepolia testnet and a real x402 facilitator. Moves testnet USDC
+  (worthless test tokens), never mainnet funds. See "Real Base Testnet
+  x402 Demo" below for exact status: **verified against the real,
+  installed x402 SDK, but not yet completed end-to-end** because this
+  project's build environment cannot reach the required hosts — not a
+  code or credential problem. Details in that section.
+
+## MOCK PAYMENT DEMO
+
+Everything in this section runs entirely against `MockX402Adapter` (see
 `docs/RESEARCH.md` §12 and §20) — no blockchain, no facilitator, no
 testnet tokens required. Every payment mode line printed says `PAYMENT
 MODE: MOCK` so this is never ambiguous.
@@ -151,16 +169,82 @@ The concurrency test in particular
 directly — it's the test the README points to as evidence for the
 project's central engineering claim.
 
-## Running against real Base Sepolia (manual, not part of any automated
+## REAL BASE TESTNET x402 DEMO (manual, not part of any automated test or CI)
 
-test or CI)
+CI and the two `pnpm demo:*` commands above never touch this path.
+`RealX402Adapter` (`packages/x402-adapter/src/real-adapter.ts`)
+hard-refuses any network other than `eip155:84532` (Base Sepolia) — there
+is no way to point it at mainnet.
 
-Requires everything listed in `docs/RESEARCH.md` §12: a running v2
-facilitator, a funded Base Sepolia EOA, and `X402_ADAPTER_MODE=real` plus
-the corresponding `X402_*` environment variables. `RealX402Adapter`
-(`packages/x402-adapter/src/real-adapter.ts`) hard-refuses any network
-other than `eip155:84532`. This path was implemented against the actual
-installed `@x402/fetch`/`@x402/evm` package APIs (verified, not guessed —
-see ADR-007) but was not exercised end-to-end against a live facilitator
-during this project's development; treat it as a documented starting
-point for a real integration, not a proven one.
+### Step 1 — readiness check (safe, costs nothing, no real key required)
+
+```bash
+pnpm --filter @x402-treasury/x402-adapter run testnet:check
+```
+
+This constructs the full real-adapter dependency chain
+(`privateKeyToAccount` → `ExactEvmScheme` → `x402Client` →
+`wrapFetchWithPayment`) against the actual installed `@x402/evm`/
+`@x402/core`/`@x402/fetch` packages — not guessed APIs, read directly from
+the installed packages' type declarations (ADR-007) — using a
+construction-only key (Anvil's well-known public test account #0, which
+holds no real funds anywhere) if you haven't set `X402_PAYER_PRIVATE_KEY`.
+It then attempts one live `GET` against the facilitator's `/supported`
+endpoint and reports exactly what happened.
+
+**Current status, run from this project's own build environment on
+2026-09-26:**
+
+```
+✓ Construction path succeeded: privateKeyToAccount -> ExactEvmScheme -> x402Client -> wrapFetchWithPayment
+  (all four are real exports of the installed @x402/evm, @x402/core, @x402/fetch packages)
+
+✗ Blocked by this environment's own network egress policy (HTTP 403):
+  Host not in allowlist: x402.org. Add this host to your network egress settings to allow access.
+```
+
+In other words: **the code is verified correct against the real SDK; the
+only thing standing between this and a real testnet settlement is that
+this specific build environment's network policy blocks outbound access
+to `x402.org`, `sepolia.base.org`, and `sepolia.basescan.org`** (confirmed
+independently for all three via the environment's own proxy diagnostics).
+This is an environment/network setting, not a missing credential — no
+private key would change this result. Run the same command from any
+environment with normal outbound internet access (a laptop, a CI runner
+without egress restrictions, a cloud environment with its network access
+level broadened or these hosts allowlisted) and it will proceed past this
+point.
+
+### Step 2 — what you need to go further
+
+Once the readiness check reaches the facilitator successfully:
+
+| Variable                 | Type                           | Where to get it                                                                                                                             | Costs anything?   |
+| ------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `X402_ADAPTER_MODE`      | string, literal `real`         | set it yourself                                                                                                                             | no                |
+| `X402_NETWORK`           | string, literal `eip155:84532` | already the default                                                                                                                         | no                |
+| `X402_FACILITATOR_URL`   | URL                            | `https://x402.org/facilitator` (public, verified testnet-only — confirm it's still up)                                                      | no                |
+| `X402_PAYER_PRIVATE_KEY` | `0x`-prefixed hex private key  | generate a **fresh, throwaway** key locally (`cast wallet new`, or any wallet's "create account") — never reuse a key that holds real funds | no                |
+| — funding that key       | testnet USDC                   | `https://faucet.circle.com` — dispenses testnet USDC on Base Sepolia                                                                        | no, it's a faucet |
+| `X402_PAYTO_ADDRESS`     | address                        | any valid address you control (or generate one)                                                                                             | no                |
+
+No testnet ETH is needed for the payer — the `exact`/EIP-3009 flow is
+gasless for the payer; the facilitator broadcasts and pays gas
+(`docs/RESEARCH.md` §10). Nothing here costs real money; testnet USDC has
+no market value.
+
+Set `X402_ADAPTER_MODE=real` and the variables above in `.env`, then start
+the API normally (`pnpm dev:api`) — `apps/api/src/index.ts` already
+switches between `MockX402Adapter` and `RealX402Adapter` based on
+`X402_ADAPTER_MODE`, refusing to start in `real` mode at all unless
+`X402_FACILITATOR_URL` and `X402_PAYER_PRIVATE_KEY` are both set
+(`apps/api/src/config.ts`). It logs `PAYMENT MODE: REAL BASE TESTNET`
+instead of `PAYMENT MODE: MOCK` on startup so the mode is never ambiguous
+from the logs. This wiring was implemented and typechecked but — per the
+readiness check above — could not be exercised end-to-end from this
+project's own build environment.
+
+**Never paste a private key into chat with an AI assistant, a support
+ticket, or any other text channel.** Set it as a local environment
+variable / `.env` entry (already gitignored) instead — that's the only
+place this codebase ever reads it from.

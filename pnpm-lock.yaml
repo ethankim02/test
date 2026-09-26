@@ -225,6 +225,9 @@ importers:
       '@x402/fetch':
         specifier: 2.27.0
         version: 2.27.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.15
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
