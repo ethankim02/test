@@ -318,6 +318,29 @@ network egress settings to allow access."` The same denial was
    are set) from an environment with outbound internet access is the
    documented next step — see `docs/DEMO.md`.
 
+### Update — completed from a machine with outbound access (2026-09-26)
+
+The documented next step was carried out. `testnet:check` reached
+`x402.org/facilitator` (HTTP 200; `exact` on `eip155:84532` supported), and
+one real $0.001 USDC payment then settled on Base Sepolia through the full
+Treasury path — transaction
+`0x1b5636aa3c8cecbac39851ce9bb71f2d116f15da992a4997fe6bfeb7c4e3a560`, block
+47322846, confirmed both via the Base Sepolia RPC (`eth_getTransactionReceipt`,
+`status 0x1`, a `transferWithAuthorization` call on the USDC contract) and on
+BaseScan; see the README's REAL BASE TESTNET x402 DEMO section for the full
+record.
+
+That run also corrected two claims in this document's earlier state. What
+was described above as "verified against the real SDK" covered
+_construction only_; the first end-to-end attempt showed
+`RealX402Adapter.discoverRequirements` unconditionally threw (so
+`executePayment` could never get past its first call) and `settlePayment`
+never returned a transaction hash (the `PAYMENT-RESPONSE` header was
+documented as "unverified" here and was simply not read). Both were fixed
+against the real `@x402/core/http` decoders (`decodePaymentRequiredHeader`,
+`decodePaymentResponseHeader`) and are covered by
+`packages/x402-adapter/src/real-adapter.test.ts`.
+
 ## Primary sources consulted
 
 - https://github.com/x402-foundation/x402

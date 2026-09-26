@@ -132,41 +132,63 @@ Separate from the mock demo above, and never conflated with it. Uses the
 actual Base Sepolia testnet and a real x402 facilitator; moves worthless
 testnet USDC, never mainnet funds.
 
-**Current status:** `RealX402Adapter` is implemented against the real,
-installed `@x402/fetch`/`@x402/evm`/`@x402/core` packages (verified
-exports, not guessed) and its full construction path —
-`privateKeyToAccount` → `ExactEvmScheme` → `x402Client` →
-`wrapFetchWithPayment` — runs successfully. A real end-to-end settlement
-has **not** been completed, for one specific, documented reason:
+**Current status: completed.** On 2026-09-26 one real payment was settled
+on Base Sepolia through the **full** Treasury path — `POST
+/payments/intents` → policy evaluation → atomic budget reservation →
+`RealX402Adapter` → real `402` + `PAYMENT-REQUIRED` from a genuinely
+x402-protected provider (`apps/demo-provider-a/src/real-server.ts`) →
+EIP-3009 signature → the public `https://x402.org/facilitator` verifies and
+settles on-chain → reservation capture and ledger entries. Nothing was
+sent around Treasury and no hash is invented: the hash below is read from
+the facilitator's `PAYMENT-RESPONSE` header and independently looked up on
+the chain.
+
+| Field                       | Value                                                                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Transaction hash**        | `0x1b5636aa3c8cecbac39851ce9bb71f2d116f15da992a4997fe6bfeb7c4e3a560`                                                                                    |
+| **Explorer**                | [sepolia.basescan.org/tx/0x1b5636aa…e3a560](https://sepolia.basescan.org/tx/0x1b5636aa3c8cecbac39851ce9bb71f2d116f15da992a4997fe6bfeb7c4e3a560)         |
+| Network                     | Base Sepolia (`eip155:84532`), chain ID 84532 — testnet only                                                                                            |
+| Result on-chain             | `status 0x1` (Success), block 47322846, **2026-09-26 09:13:00 UTC**                                                                                     |
+| Amount                      | **$0.001000 USDC** (1000 minor units, 6 decimals), `exact` scheme (EIP-3009 `transferWithAuthorization`)                                                |
+| Payer / payTo               | both `0xa89C5fB293ade8a170735d16E6A31427375B0470` (a throwaway testnet key; the payment is a self-transfer, so the wallet's USDC stays at 20.000000)    |
+| Settled by                  | `0xd407e409E34E0b9afb99EcCeb609bDbcD5e7f1bf` — the x402.org facilitator's address (as advertised by its `/supported`); it broadcast the tx and paid gas |
+| **Session balance before**  | allocated $0.050000 · spent $0.000000 · reserved $0.000000 · **available $0.050000**                                                                    |
+| **Session balance after**   | allocated $0.050000 · spent **$0.001000** · reserved $0.000000 · **available $0.049000**                                                                |
+| Payment intent              | `45ab3f67-3e3d-4643-b873-cb79b90d3bc0`: `CREATED → POLICY_EVALUATING → APPROVED → RESERVED → PAYMENT_PREPARED → VERIFYING → SETTLING → SETTLED`         |
+| Treasury timestamps (local) | payment requested 2026-09-26T09:12:55.279Z · intent `SETTLED` 2026-09-26T09:12:56.794Z                                                                  |
+
+Policy checks that passed before any money moved: `SESSION_BUDGET_LIMIT`,
+`PER_TRANSACTION_LIMIT` ($0.01 cap), `PROVIDER_ALLOWLIST`. On BaseScan the
+transaction shows a single ERC-20 transfer of 0.001 USDC (`Transfer` +
+`AuthorizationUsed` logs) on the USDC contract
+`0x036CbD53842c5426634e7929541eC2318f3dCF7e`.
+
+The Treasury-side values above (balances, intent states, timestamps) were
+copied from the API responses captured at run time; the local dev
+database that held those rows was later reset, so only the on-chain
+transaction is independently re-checkable — the row-level ledger entries
+are not. The two clocks (local vs. block time) differ by a few seconds.
+
+Reproduce it (needs a funded testnet wallet; see
+[`docs/DEMO.md`](docs/DEMO.md) "REAL BASE TESTNET x402 DEMO" for every
+step and environment variable):
 
 ```bash
-pnpm --filter @x402-treasury/x402-adapter run testnet:check
+pnpm --filter @x402-treasury/x402-adapter run testnet:check    # reaches x402.org/facilitator, eip155:84532 + exact supported
+pnpm --filter @x402-treasury/x402-adapter run testnet:wallet   # throwaway key -> .env only, prints the public address
+# fund that address with testnet USDC at https://faucet.circle.com (Base Sepolia); no ETH needed
+X402_REAL_PAYTO_ADDRESS=0xYourAddress pnpm --filter @x402-treasury/demo-provider-a run start:real
+X402_ADAPTER_MODE=real pnpm dev:api                            # logs "PAYMENT MODE: REAL BASE TESTNET"
 ```
 
-```
-✓ Construction path succeeded: privateKeyToAccount -> ExactEvmScheme -> x402Client -> wrapFetchWithPayment
-  (all four are real exports of the installed @x402/evm, @x402/core, @x402/fetch packages)
-
-✗ Blocked by this environment's own network egress policy (HTTP 403):
-  Host not in allowlist: x402.org. Add this host to your network egress settings to allow access.
-```
-
-This project's own build/development environment cannot make outbound
-network calls to `x402.org`, `sepolia.base.org`, or `sepolia.basescan.org`
-— confirmed directly against the environment's own proxy diagnostics, not
-assumed. **This is not a code, protocol, or credential problem** — it's
-this specific sandbox's network policy. See
-[`docs/RESEARCH.md`](docs/RESEARCH.md) §13 for the full verification
-attempt and [`docs/DEMO.md`](docs/DEMO.md) "REAL BASE TESTNET x402 DEMO"
-for the exact environment variables, faucet, and steps needed to complete
-this from an environment with normal outbound internet access — no
-testnet ETH is required (the payer flow is gasless), only testnet USDC
-from `https://faucet.circle.com`, and nothing in the process costs real
-money.
-
-Once completed from such an environment, this section is where the real
-transaction hash, amount, network, and block-explorer link belong —
-intentionally left blank rather than fabricated.
+then register an org/agent/session/provider and `POST /payments/intents`.
+Getting this to run required two adapter fixes that the earlier
+"verified-but-not-exercised" state had hidden: `RealX402Adapter` now reads
+the authoritative price from the real `PAYMENT-REQUIRED` header
+(`discoverRequirements` used to throw), and takes the transaction hash from
+the `PAYMENT-RESPONSE` header (it used to return none). Both are covered by
+`packages/x402-adapter/src/real-adapter.test.ts`, which drives the real SDK
+signing path against a local stand-in server with no network access.
 
 ## Budget hierarchy
 
@@ -209,7 +231,7 @@ machine) and §7 (reconciliation).
 ## Tests
 
 ```bash
-pnpm test               # 67 unit tests — no database
+pnpm test               # 74 unit tests — no database
 pnpm test:integration   # 32 integration tests — real Postgres (docker compose up -d first)
 ```
 
@@ -250,21 +272,23 @@ Two adapters implement one `PaymentRail` interface
   files, not guessed). `apps/api` switches to it only when
   `X402_ADAPTER_MODE=real` is explicitly set (`apps/api/src/config.ts`
   refuses to start in that mode without both `X402_FACILITATOR_URL` and
-  `X402_PAYER_PRIVATE_KEY`). Exercised manually only; **CI never runs this
-  path** and this README does not claim it does. See
-  [REAL BASE TESTNET x402 DEMO](#real-base-testnet-x402-demo) above for
-  exactly how far this was verified and why an actual settlement hasn't
-  been completed yet.
+  `X402_PAYER_PRIVATE_KEY`). Exercised manually only — one real Base
+  Sepolia settlement has been completed through it (see
+  [REAL BASE TESTNET x402 DEMO](#real-base-testnet-x402-demo) above for the
+  transaction hash and explorer link); **CI never runs this path** (its
+  header parsing is unit-tested against a local stand-in server instead)
+  and this README does not claim otherwise.
 
 ## Limitations
 
-- `RealX402Adapter` was implemented against the verified SDK surface and
-  its construction path runs successfully against the real packages, but
-  a real settlement was not completed: this project's own build
-  environment's network policy blocks outbound access to the facilitator,
-  RPC, and explorer hosts required (confirmed directly, not assumed — see
-  `docs/RESEARCH.md` §13). Treat it as verified-but-not-yet-exercised, not
-  unverified.
+- `RealX402Adapter` has been exercised end-to-end exactly once (a $0.001
+  Base Sepolia settlement, see above) and only manually — no automated
+  test or CI job touches a live facilitator or chain. Its
+  `settlePayment` reports a failure (and Treasury releases the
+  reservation) if a paid response carries no `PAYMENT-RESPONSE`
+  settlement header, even in the unlikely case the facilitator had
+  already settled; that fail-safe direction has not been exercised
+  against the live facilitator.
 - No production-grade auth (API keys are SHA-256-hashed bearer tokens,
   no rotation/expiry/scoping beyond org-vs-agent).
 - No request-rate limiting at the HTTP layer.

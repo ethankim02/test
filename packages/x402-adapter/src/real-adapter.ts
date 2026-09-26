@@ -1,5 +1,7 @@
 import { ExactEvmScheme } from '@x402/evm';
 import { x402Client } from '@x402/core/client';
+import { decodePaymentRequiredHeader, decodePaymentResponseHeader } from '@x402/core/http';
+import type { PaymentRequired } from '@x402/core/types';
 import { wrapFetchWithPayment } from '@x402/fetch';
 import { privateKeyToAccount } from 'viem/accounts';
 import type {
@@ -18,18 +20,18 @@ import type {
  * `x402Client`, and `ExactEvmScheme` are real exports with the constructor
  * shapes used below, not guessed.
  *
- * This class collapses `discoverRequirements` / `preparePayment` /
- * `verifyPayment` / `settlePayment` into one underlying call to
- * `wrapFetchWithPayment`, because that's what the real SDK actually
- * exposes: a fetch wrapper that internally does the 402 -> sign -> retry
- * dance and talks to the facilitator server-side (the resource server
- * calls verify/settle, not the client — see docs/RESEARCH.md §3/§6).
- * `discoverRequirements`/`preparePayment` are no-ops here for interface
- * compatibility with `PaymentRail`; the real work happens in
- * `settlePayment`, which performs the one wrapped request. `verifyPayment`
- * always returns `isValid: true` optimistically — the actual verification
- * happens as part of that same wrapped request, and its result surfaces
- * through the HTTP outcome of `settlePayment`.
+ * `discoverRequirements` issues one plain, unpaid GET and reads the real
+ * `PAYMENT-REQUIRED` header off the resource's 402 response — this is what
+ * lets Treasury learn the authoritative price/payTo before it reserves
+ * budget (`apps/api/src/payment-flow.ts`). The SDK exposes signing only as
+ * a fetch wrapper (`wrapFetchWithPayment`) that internally does the
+ * 402 -> sign -> retry dance, so `preparePayment`/`verifyPayment` are
+ * no-ops for interface compatibility with `PaymentRail`, and the signing +
+ * facilitator verify/settle (which the *resource server* performs, not the
+ * client — see docs/RESEARCH.md §3/§6) all happen inside the one wrapped
+ * request in `settlePayment`. The settlement transaction hash is read from
+ * that response's `PAYMENT-RESPONSE` header; a success without one is
+ * refused rather than reported.
  *
  * Requires `X402_PAYER_PRIVATE_KEY` (a Base Sepolia-funded EOA — never a
  * mainnet key) and `X402_NETWORK` (must be `eip155:84532`, enforced
@@ -37,6 +39,7 @@ import type {
  */
 export class RealX402Adapter implements PaymentRail {
   private readonly client: x402Client;
+  private readonly network: string;
 
   constructor(payerPrivateKey: `0x${string}`, network: string) {
     if (network !== 'eip155:84532') {
@@ -45,19 +48,41 @@ export class RealX402Adapter implements PaymentRail {
           'This project never sends real mainnet funds automatically — see docs/THREAT_MODEL.md.',
       );
     }
+    this.network = network;
     const account = privateKeyToAccount(payerPrivateKey);
     this.client = new x402Client().register(network, new ExactEvmScheme(account));
   }
 
-  async discoverRequirements(_resource: ResourceRef): Promise<PaymentRequirements> {
-    // wrapFetchWithPayment discovers requirements internally from the
-    // real 402 response; there is nothing useful to pre-fetch here
-    // without duplicating that request. Treasury's caller should treat
-    // discoverRequirements as informational for the real adapter and
-    // rely on settlePayment's result for the authoritative outcome.
-    throw new Error(
-      'RealX402Adapter.discoverRequirements is not separately supported — call settlePayment, which performs discovery, signing, and settlement in one wrapped request via @x402/fetch.',
+  async discoverRequirements(resource: ResourceRef): Promise<PaymentRequirements> {
+    const response = await fetch(resource.url);
+    if (response.status !== 402) {
+      throw new Error(
+        `expected HTTP 402 Payment Required from ${resource.url}, got HTTP ${response.status} — ` +
+          'the resource is not x402-protected (or is not asking for payment)',
+      );
+    }
+    const header = response.headers.get('PAYMENT-REQUIRED');
+    const paymentRequired: PaymentRequired = header
+      ? decodePaymentRequiredHeader(header)
+      : ((await response.json()) as PaymentRequired);
+
+    const accepted = paymentRequired.accepts?.find(
+      (a) => a.scheme === 'exact' && a.network === this.network,
     );
+    if (!accepted) {
+      throw new Error(
+        `${resource.url} does not accept the "exact" scheme on ${this.network}; it offered: ` +
+          JSON.stringify((paymentRequired.accepts ?? []).map((a) => `${a.scheme}@${a.network}`)),
+      );
+    }
+    return {
+      scheme: accepted.scheme,
+      network: accepted.network,
+      amountMinor: BigInt(accepted.amount),
+      asset: accepted.asset,
+      payTo: accepted.payTo,
+      maxTimeoutSeconds: accepted.maxTimeoutSeconds,
+    };
   }
 
   async preparePayment(): Promise<SignedPayment> {
@@ -82,14 +107,32 @@ export class RealX402Adapter implements PaymentRail {
           errorReason: `HTTP ${response.status} from ${resource.url} after payment`,
         };
       }
+      const settlementHeader =
+        response.headers.get('PAYMENT-RESPONSE') ?? response.headers.get('X-PAYMENT-RESPONSE');
+      if (!settlementHeader) {
+        return {
+          outcome: 'FAILED',
+          errorReason:
+            `HTTP ${response.status} from ${resource.url} carried no PAYMENT-RESPONSE settlement ` +
+            'header, so no settlement transaction hash can be confirmed',
+        };
+      }
+      const settlement = decodePaymentResponseHeader(settlementHeader);
+      if (!settlement.success || !settlement.transaction) {
+        return {
+          outcome: 'FAILED',
+          errorReason: `facilitator reported settlement failure: ${settlement.errorReason ?? 'unknown'}${
+            settlement.errorMessage ? ` (${settlement.errorMessage})` : ''
+          }`,
+        };
+      }
       const resourceBody: unknown = await response.json().catch(() => undefined);
-      // @x402/core/http exposes decodePaymentResponseHeader to read the
-      // settlement confirmation off the response; wire it in here once
-      // you've confirmed the header name your facilitator actually sends
-      // (see docs/RESEARCH.md — this project did not exercise a live
-      // facilitator during development, so the exact response header is
-      // documented as unverified).
-      return { outcome: 'SUCCESS', network: requirements.network, resourceBody };
+      return {
+        outcome: 'SUCCESS',
+        transactionHash: settlement.transaction,
+        network: settlement.network,
+        resourceBody,
+      };
     } catch (err) {
       return { outcome: 'FAILED', errorReason: err instanceof Error ? err.message : String(err) };
     }

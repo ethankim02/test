@@ -11,10 +11,9 @@ This document covers two entirely separate things. Do not confuse them:
 run testnet:check`, and a real payment flow beyond it) — uses the actual
   Base Sepolia testnet and a real x402 facilitator. Moves testnet USDC
   (worthless test tokens), never mainnet funds. See "Real Base Testnet
-  x402 Demo" below for exact status: **verified against the real,
-  installed x402 SDK, but not yet completed end-to-end** because this
-  project's build environment cannot reach the required hosts — not a
-  code or credential problem. Details in that section.
+  x402 Demo" below for exact status: **completed once end-to-end on
+  2026-09-26** — one real $0.001 settlement through the full Treasury
+  path, tx hash and explorer link in the README and in that section.
 
 ## MOCK PAYMENT DEMO
 
@@ -158,11 +157,21 @@ surface implied by the Zod schemas in each route file.
 ## Running the mandatory automated tests yourself
 
 ```bash
-pnpm test               # 67 unit tests, no database
+pnpm test               # 74 unit tests, no database
 docker compose up -d    # if not already running
 pnpm db:migrate         # against treasury_test if you set DATABASE_URL/MIGRATOR_DATABASE_URL there
 pnpm test:integration   # 32 integration tests against real Postgres
 ```
+
+**Careful with `DATABASE_URL`:** the integration suite `TRUNCATE`s every
+domain table in whatever database it resolves. If `DATABASE_URL` /
+`MIGRATOR_DATABASE_URL` are exported in your shell and point at
+`treasury_dev`, the suite wipes that database — including any real-payment
+records. Point both at a dedicated `treasury_test` database for the run
+(`docker compose exec postgres psql -U treasury_migrator -d postgres -c
+'CREATE DATABASE treasury_test OWNER treasury_migrator;' -c 'GRANT CONNECT
+ON DATABASE treasury_test TO treasury_app;'`, then export the two URLs with
+`treasury_test`).
 
 The concurrency test in particular
 (`packages/ledger/test/concurrency.integration.test.ts`) is worth reading
@@ -192,28 +201,21 @@ holds no real funds anywhere) if you haven't set `X402_PAYER_PRIVATE_KEY`.
 It then attempts one live `GET` against the facilitator's `/supported`
 endpoint and reports exactly what happened.
 
-**Current status, run from this project's own build environment on
-2026-09-26:**
+**Result from a machine with normal outbound access (2026-09-26):**
 
 ```
 ✓ Construction path succeeded: privateKeyToAccount -> ExactEvmScheme -> x402Client -> wrapFetchWithPayment
   (all four are real exports of the installed @x402/evm, @x402/core, @x402/fetch packages)
 
-✗ Blocked by this environment's own network egress policy (HTTP 403):
-  Host not in allowlist: x402.org. Add this host to your network egress settings to allow access.
+✓ Reached facilitator: HTTP 200
+{"kinds":[{"x402Version":2,"scheme":"exact","network":"eip155:84532"}, ... ]}
+Network access confirmed. A real payment flow can proceed from this environment.
 ```
 
-In other words: **the code is verified correct against the real SDK; the
-only thing standing between this and a real testnet settlement is that
-this specific build environment's network policy blocks outbound access
-to `x402.org`, `sepolia.base.org`, and `sepolia.basescan.org`** (confirmed
-independently for all three via the environment's own proxy diagnostics).
-This is an environment/network setting, not a missing credential — no
-private key would change this result. Run the same command from any
-environment with normal outbound internet access (a laptop, a CI runner
-without egress restrictions, a cloud environment with its network access
-level broadened or these hosts allowlisted) and it will proceed past this
-point.
+(An environment whose egress policy blocks `x402.org`,
+`sepolia.base.org` or `sepolia.basescan.org` — as this project's original
+sandbox did, see `docs/RESEARCH.md` §13 — prints `✗ Blocked …` here
+instead; that is a network setting, not a code or credential problem.)
 
 ### Step 2 — what you need to go further
 
@@ -240,9 +242,11 @@ switches between `MockX402Adapter` and `RealX402Adapter` based on
 `X402_FACILITATOR_URL` and `X402_PAYER_PRIVATE_KEY` are both set
 (`apps/api/src/config.ts`). It logs `PAYMENT MODE: REAL BASE TESTNET`
 instead of `PAYMENT MODE: MOCK` on startup so the mode is never ambiguous
-from the logs. This wiring was implemented and typechecked but — per the
-readiness check above — could not be exercised end-to-end from this
-project's own build environment.
+from the logs. This wiring has now been exercised end-to-end once (see the
+README for the transaction hash). Notes from that run: `apps/api` does not
+load `.env` by itself — export the variables (or `node --env-file=.env`)
+in the process that starts it — and port 3000 may already be taken on your
+machine, so set `API_PORT` if `pnpm dev:api` fails to bind.
 
 **Never paste a private key into chat with an AI assistant, a support
 ticket, or any other text channel.** Set it as a local environment
@@ -300,7 +304,19 @@ curl -X POST http://localhost:3000/providers \
 ```
 
 then send `POST /payments/intents` for that `providerId` the same way
-`apps/demo-agent/src/demo-research.ts` does for the mock providers. No API
-or adapter code changes are needed for this — `PaymentRail` is the same
-interface either way (ADR-007); only the provider being paid, and the
-adapter behind it, differ.
+`apps/demo-agent/src/demo-research.ts` does for the mock providers.
+`PaymentRail` is the same interface either way (ADR-007); only the
+provider being paid, and the adapter behind it, differ. (A first version of
+this section claimed no adapter changes were needed; the first real run
+showed otherwise — `RealX402Adapter.discoverRequirements` had to read the
+real `PAYMENT-REQUIRED` header and `settlePayment` had to return the
+settlement hash from `PAYMENT-RESPONSE`. Both are now implemented and
+unit-tested in `packages/x402-adapter/src/real-adapter.test.ts`.)
+
+Useful register-time settings from the completed run: a $0.05 session
+budget, an ORG `PER_TRANSACTION_LIMIT` of `10000` minor units ($0.01) and a
+`PROVIDER_ALLOWLIST` containing just this provider. The default price is
+`$0.001`, and `X402_REAL_PAYTO_ADDRESS` set to the payer's own address makes
+the payment a self-transfer — still a real on-chain settlement (BaseScan
+shows the 0.001 USDC `Transfer`), but the payer's balance will not move; use
+a different payout address if you want to watch it change.
