@@ -10,7 +10,7 @@ jobs:
     name: Lint, typecheck, unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -43,7 +43,7 @@ jobs:
       MIGRATOR_DATABASE_URL: postgresql://treasury_migrator:treasury@localhost:5432/treasury_test
       DATABASE_URL: postgresql://treasury_app:treasury@localhost:5432/treasury_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
