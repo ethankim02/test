@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import pg from 'pg';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -50,7 +50,10 @@ export async function runMigrations(connectionString: string): Promise<string[]>
   return applied;
 }
 
-const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+// pathToFileURL (not a raw `file://${...}` template) is required for this
+// comparison to work on Windows, where argv[1] uses backslashes and a drive
+// letter that don't match import.meta.url's URL-encoded forward-slash form.
+const isMain = process.argv[1] != null && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   const connectionString = process.env.MIGRATOR_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!connectionString) {

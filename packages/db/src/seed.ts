@@ -1,5 +1,6 @@
 import { hashApiKey } from '@x402-treasury/shared';
 import { eq } from 'drizzle-orm';
+import { pathToFileURL } from 'node:url';
 import { createDb } from './client.js';
 import * as schema from './schema.js';
 
@@ -229,7 +230,10 @@ export async function seed(connectionString: string): Promise<{ orgId: string; a
   }
 }
 
-const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+// pathToFileURL (not a raw `file://${...}` template) is required for this
+// comparison to work on Windows, where argv[1] uses backslashes and a drive
+// letter that don't match import.meta.url's URL-encoded forward-slash form.
+const isMain = process.argv[1] != null && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
