@@ -1,11 +1,12 @@
 # x402 Treasury
 
+[![CI](https://github.com/ethankim02/x402-treasury/actions/workflows/ci.yml/badge.svg)](https://github.com/ethankim02/x402-treasury/actions/workflows/ci.yml)
+
 **Programmable spending infrastructure for autonomous AI agents.**
 
-x402 lets autonomous software pay for resources. x402 Treasury controls
-how, when, where, and how much autonomous software is allowed to spend —
-a treasury and payment-control layer that manages budgets, policies,
-delegated spending, routing, and settlement across x402-enabled services.
+x402 allows autonomous software to pay for resources. x402 Treasury adds
+the control plane required to manage autonomous spending safely — across
+budgets, policies, concurrency, retries, routing, and settlement.
 
 ## Why this exists
 
