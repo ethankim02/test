@@ -8,6 +8,16 @@ x402 allows autonomous software to pay for resources. x402 Treasury adds
 the control plane required to manage autonomous spending safely — across
 budgets, policies, concurrency, retries, routing, and settlement.
 
+- **106 automated tests** (74 unit + 32 integration against real Postgres)
+- **Real Base Sepolia x402 settlement**, verified on-chain — [tx
+  `0x1b5636aa…e3a560`](https://sepolia.basescan.org/tx/0x1b5636aa3c8cecbac39851ce9bb71f2d116f15da992a4997fe6bfeb7c4e3a560)
+- **$1.00 budget, 10 concurrent $0.50 requests → exactly 2 succeed**, $0
+  overspend, proven under real Postgres load
+- **PostgreSQL-backed append-only ledger** — `UPDATE`/`DELETE` revoked at
+  the database privilege level, not just enforced in application code
+
+![Terminal recording of `pnpm demo:research`: provider discovery and routing, policy checks all passing, a settled mock payment, and the updated session budget](docs/img/demo-research.gif)
+
 ## Why this exists
 
 x402 v2's own specification is explicit about its boundaries: _"Out of
@@ -32,7 +42,7 @@ flowchart LR
     Ledger --> PG[("PostgreSQL")]
     API --> Adapter["x402 Adapter"]
     Adapter -->|"verify / settle"| Facilitator["x402 Facilitator"]
-    Facilitator --> Base[("Base (Sepolia / mainnet)")]
+    Facilitator --> Base[("Base Sepolia Testnet")]
     Adapter -->|"HTTP 402 + PAYMENT-REQUIRED / PAYMENT-SIGNATURE"| Provider["x402-enabled Provider"]
     Provider -->|"resource"| API
     API -->|"resource + spend summary"| Agent
@@ -301,20 +311,12 @@ Two adapters implement one `PaymentRail` interface
   list of what this project does **not** claim to do (no fraud detection,
   no provider-identity verification, no resource-quality guarantee).
 
-## Roadmap
+## Deliberately out of scope
 
-- Human-approval resume flow for `REVIEW` decisions.
-- Scheduled/automatic reservation-expiry sweeps and reconciliation runs
-  (both exist as callable functions today; nothing runs them on a
-  timer).
-- A budget re-parenting API, with the cycle-prevention trigger that
-  already exists for it.
-- A lightweight read-only dashboard (spec §33) — deliberately not built
-  before core payment correctness, per the project's own stated
-  priorities.
-- Prometheus-compatible metrics export (an internal counter abstraction
-  exists; nothing scrapes it yet).
-- A full user/identity system beyond org- and agent-scoped API keys.
+Payment correctness came first. Not built, on purpose: a dashboard UI, a
+full user/identity system, and scheduled background jobs (reservation
+expiry, reconciliation) for what today are callable functions run
+on demand. Full list and rationale: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Repository layout
 
