@@ -248,3 +248,59 @@ project's own build environment.
 ticket, or any other text channel.** Set it as a local environment
 variable / `.env` entry (already gitignored) instead — that's the only
 place this codebase ever reads it from.
+
+### Step 3 — a genuine x402-protected target: `demo-provider-a`'s real server
+
+Every provider under "MOCK PAYMENT DEMO" above settles through this
+project's own in-memory fake facilitator (`mockSettle`) — even with
+`X402_ADAPTER_MODE=real` on the API side, those endpoints never send a
+real 402 challenge, so paying them can never produce a real settlement.
+
+`apps/demo-provider-a/src/real-server.ts` is a **separate, genuinely
+x402-protected endpoint**, wired with the official SDKs exactly as their
+own README documents:
+
+```typescript
+import { HTTPFacilitatorClient, x402ResourceServer } from '@x402/core/server';
+import { ExactEvmScheme } from '@x402/evm/exact/server';
+import { paymentMiddleware } from '@x402/fastify';
+```
+
+It never touches a private key — a resource server only needs its own
+public payout address (`payTo`). Start it with:
+
+```bash
+X402_REAL_PAYTO_ADDRESS=0xYourTestnetPayoutAddress \
+  pnpm --filter @x402-treasury/demo-provider-a run start:real
+```
+
+It listens on port 4011 (`DEMO_PROVIDER_A_REAL_PORT` to override) and
+serves `GET /real/research`, priced at `X402_REAL_PRICE` (default
+`$0.001`) on `X402_NETWORK` (default `eip155:84532`), verified against
+`X402_FACILITATOR_URL` (default `https://x402.org/facilitator`). It logs
+`PAYMENT MODE: REAL` on startup, never `MOCK`, and must never be started
+from CI or an automated test.
+
+To pay it through the **full** Treasury path (not a bypass — Demo Agent →
+Treasury API → session → policy → reservation → `RealX402Adapter` → 402 →
+payment → facilitator verify/settle → ledger capture), register it as an
+ordinary provider once the API is running with `X402_ADAPTER_MODE=real`:
+
+```bash
+curl -X POST http://localhost:3000/providers \
+  -H "content-type: application/json" \
+  -d '{
+    "name": "Provider A (real Base Sepolia)",
+    "baseUrl": "http://localhost:4011",
+    "resourcePath": "/real/research",
+    "category": "research",
+    "network": "eip155:84532",
+    "trustStatus": "TRUSTED"
+  }'
+```
+
+then send `POST /payments/intents` for that `providerId` the same way
+`apps/demo-agent/src/demo-research.ts` does for the mock providers. No API
+or adapter code changes are needed for this — `PaymentRail` is the same
+interface either way (ADR-007); only the provider being paid, and the
+adapter behind it, differ.
