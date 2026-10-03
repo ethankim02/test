@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@x402-treasury/shared": "workspace:*",
-    "drizzle-orm": "^0.38.2",
+    "drizzle-orm": "^0.45.3",
     "pg": "^8.13.1"
   },
   "devDependencies": {
